@@ -76,8 +76,7 @@ jobs:
 
           if [ -n "${{ needs.fetch-failures.outputs.markdown_fragment }}" ]; then
             final_description="$base_description
-
-${{ needs.fetch-failures.outputs.markdown_fragment }}"
+            ${{ needs.fetch-failures.outputs.markdown_fragment }}"
           else
             final_description="$base_description"
           fi
