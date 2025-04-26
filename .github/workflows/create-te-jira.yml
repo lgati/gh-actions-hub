@@ -76,7 +76,7 @@ jobs:
 
           if [ -n "${{ needs.fetch-failures.outputs.markdown_fragment }}" ]; then
             final_description="$base_description
-            ${{ needs.fetch-failures.outputs.markdown_fragment }}"
+        ${{ needs.fetch-failures.outputs.markdown_fragment }}"
           else
             final_description="$base_description"
           fi
@@ -102,16 +102,6 @@ jobs:
 
           echo "issue=$ISSUE_KEY" >> $GITHUB_OUTPUT
 
-      - name: Assign Jira Ticket
-        run: |
-          accountId=$(curl -s -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
-            -G --data-urlencode "query=$JIRA_USER_EMAIL" \
-            "$JIRA_SITE_URL/rest/api/3/user/search" | jq -r '.[0].accountId')
-
-          if [ -z "$accountId" ] || [ "$accountId" = "null" ]; then
-            echo "⚠️ No Jira account ID found for $JIRA_USER_EMAIL. Skipping assignment."
-            exit 0
-          fi
 
           echo "Assigning ticket to accountId: $accountId"
 
