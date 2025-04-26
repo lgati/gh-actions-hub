@@ -69,39 +69,50 @@ jobs:
       JIRA_USER_EMAIL: ${{ vars.JIRA_API_EMAIL }}
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
     steps:
-      - name: Create Jira Issue
-        id: create
+
+      - name: Authenticate with Jira 
+        if: ${{ inputs.mock_mode == 'false' }}
+        uses: atlassian/gajira-login@v3
+
+      - name: Set repository name in uppercase
+        id: set_repo_name
         run: |
+          echo "REPO_NAME=$(echo '${{ github.repository }}' | cut -d'/' -f2 | tr 'a-z' 'A-Z')" >> $GITHUB_ENV
+
+      - name: Create Jira issue (real)
+        id: create
+        if: ${{ inputs.mock_mode == 'false' }}
+        uses: atlassian/gajira-create@v3
+        with:
+          project: GH
+          issuetype: Task
+          summary: >
+            [${{ env.REPO_NAME }}] Issue detected on PR #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
+          description: |
+
           base_description="A request for Test Engineering support was submitted via a GitHub Pull Request."
 
           if [ -n "${{ needs.fetch-failures.outputs.markdown_fragment }}" ]; then
             final_description="$base_description
-        ${{ needs.fetch-failures.outputs.markdown_fragment }}"
+
+            ${{ needs.fetch-failures.outputs.markdown_fragment }}"
           else
             final_description="$base_description"
           fi
+            A request for Test Engineering support was submitted via a GitHub Pull Request.
 
-          echo "Creating Jira issue with description:"
-          echo "$final_description"
+            Please review the PR and keep the ticket up-to-date with the progress status.
+    
+      - name: Assign Jira Ticket
+        run: |
+          accountId=$(curl -s -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+            -G --data-urlencode "query=$JIRA_USER_EMAIL" \
+            "$JIRA_SITE_URL/rest/api/3/user/search" | jq -r '.[0].accountId')
 
-          RESPONSE=$(curl -s -X POST -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
-            -H "Accept: application/json" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"fields\": {
-                \"project\": { \"key\": \"TE\" },
-                \"summary\": \"Automated issue from PR #${{ inputs.pr_number }}: ${{ needs.fetch-pr-info.outputs.pr_title }}\",
-                \"description\": \"$final_description\",
-                \"issuetype\": { \"name\": \"Incident Response\" }
-              }
-            }" \
-            "$JIRA_SITE_URL/rest/api/3/issue")
-
-          ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.key')
-          echo "Created Jira ticket: $ISSUE_KEY"
-
-          echo "issue=$ISSUE_KEY" >> $GITHUB_OUTPUT
-
+          if [ -z "$accountId" ] || [ "$accountId" = "null" ]; then
+            echo "⚠️ No Jira account ID found for $JIRA_USER_EMAIL. Skipping assignment."
+            exit 0
+          fi
 
           echo "Assigning ticket to accountId: $accountId"
 
