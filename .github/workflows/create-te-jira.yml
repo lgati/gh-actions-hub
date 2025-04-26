@@ -71,7 +71,6 @@ jobs:
     steps:
 
       - name: Authenticate with Jira 
-        if: ${{ inputs.mock_mode == 'false' }}
         uses: atlassian/gajira-login@v3
 
       - name: Set repository name in uppercase
@@ -81,7 +80,6 @@ jobs:
 
       - name: Create Jira issue (real)
         id: create
-        if: ${{ inputs.mock_mode == 'false' }}
         uses: atlassian/gajira-create@v3
         with:
           project: GH
@@ -90,18 +88,18 @@ jobs:
             [${{ env.REPO_NAME }}] Issue detected on PR #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
           description: |
 
-          base_description="A request for Test Engineering support was submitted via a GitHub Pull Request."
+            base_description="A request for Test Engineering support was submitted via a GitHub Pull Request."
 
-          if [ -n "${{ needs.fetch-failures.outputs.markdown_fragment }}" ]; then
-            final_description="$base_description
+            if [ -n "${{ needs.fetch-failures.outputs.markdown_fragment }}" ]; then
+              final_description="$base_description
 
-            ${{ needs.fetch-failures.outputs.markdown_fragment }}"
-          else
-            final_description="$base_description"
-          fi
-            A request for Test Engineering support was submitted via a GitHub Pull Request.
+              ${{ needs.fetch-failures.outputs.markdown_fragment }}"
+            else
+              final_description="$base_description"
+            fi
+              A request for Test Engineering support was submitted via a GitHub Pull Request.
 
-            Please review the PR and keep the ticket up-to-date with the progress status.
+              Please review the PR and keep the ticket up-to-date with the progress status.
     
       - name: Assign Jira Ticket
         run: |
