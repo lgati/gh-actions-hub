@@ -26,11 +26,11 @@ jobs:
           echo "Fetching external checks for commit: ${{ inputs.pr_head_sha }} in repo: ${{ inputs.repo_name }}"
 
           CHECK_RUNS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/check-runs")
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/check-runs")
 
           FAILURES=$(echo "$CHECK_RUNS" | jq -r '
-            .check_runs[]
+            (.check_runs // [])[]
             | select(
                 (.app.name == "Currents" or .app.name == "Argos CI")
                 and (.conclusion != "success")
@@ -40,11 +40,12 @@ jobs:
 
           if [ -n "$FAILURES" ]; then
             MARKDOWN="| App | Name | Status | Details URL |
-            |:----|:-----|:-------|:------------|
-            $FAILURES"
+          |:----|:-----|:-------|:------------|
+          $FAILURES"
             echo "markdown_fragment<<EOF" >> $GITHUB_OUTPUT
             echo "$MARKDOWN" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           else
+            echo "No failures found."
             echo "markdown_fragment=" >> $GITHUB_OUTPUT
           fi
