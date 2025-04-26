@@ -33,7 +33,7 @@ jobs:
           API_URL="https://api.github.com/repos/${{ inputs.repo_name }}/pulls/${{ inputs.pr_number }}"
           
           HTTP_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Authorization: Bearer ${{ vars.GHA_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$API_URL")
 
