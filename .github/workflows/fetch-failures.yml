@@ -6,6 +6,9 @@ on:
       pr_head_sha:
         required: true
         type: string
+      repo_name:
+        required: true
+        type: string
     outputs:
       markdown_fragment:
         description: "Markdown fragment listing external check failures"
@@ -20,10 +23,11 @@ jobs:
       - name: Detect External Failures
         id: generate
         run: |
-          # Call GitHub API to fetch check runs for the PR SHA
+          echo "Fetching external checks for commit: ${{ inputs.pr_head_sha }} in repo: ${{ inputs.repo_name }}"
+
           CHECK_RUNS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/commits/${{ inputs.pr_head_sha }}/check-runs")
+            "https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/check-runs")
 
           FAILURES=$(echo "$CHECK_RUNS" | jq -r '
             .check_runs[]
