@@ -66,7 +66,7 @@ jobs:
     needs: [fetch-pr-info, fetch-failures]
     runs-on: ubuntu-latest
     env:
-      JIRA_SITE_URL: ${{ vars.JIRA_SITE_URL }}
+      JIRA_BASE_URL: ${{ vars.JIRA_SITE_URL }}
       JIRA_USER_EMAIL: ${{ vars.JIRA_API_EMAIL }}
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
     steps:
