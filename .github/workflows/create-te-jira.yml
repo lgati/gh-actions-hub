@@ -5,6 +5,7 @@ on:
     inputs:
       pr_number:
         description: "Pull Request Number"
+        default: 1
         required: true
         type: string
       repo_name:
