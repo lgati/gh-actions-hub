@@ -1,0 +1,111 @@
+name: Create Jira Ticket
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Pull Request Number"
+        default: 2
+        required: true
+        type: string
+
+jobs:
+  fetch-pr-info:
+    runs-on: ubuntu-latest
+    outputs:
+      pr_title: ${{ steps.fetch.outputs.pr_title }}
+      pr_head_sha: ${{ steps.fetch.outputs.pr_head_sha }}
+    steps:
+      - name: Fetch PR Title and Head SHA
+        id: fetch
+        run: |
+          echo "Fetching PR details..."
+
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ inputs.pr_number }}")
+
+          PR_TITLE=$(echo "$RESPONSE" | jq -r '.title')
+          PR_HEAD_SHA=$(echo "$RESPONSE" | jq -r '.head.sha')
+
+          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
+          echo "pr_head_sha=$PR_HEAD_SHA" >> $GITHUB_OUTPUT
+
+  fetch-failures:
+    needs: fetch-pr-info
+    uses: ./.github/workflows/fetch-failures.yml
+    with:
+      pr_head_sha: ${{ needs.fetch-pr-info.outputs.pr_head_sha }}
+
+  create-jira-ticket:
+    needs: [fetch-pr-info, fetch-failures]
+    runs-on: ubuntu-latest
+    env:
+      JIRA_SITE_URL: ${{ vars.JIRA_SITE_URL }}
+      JIRA_USER_EMAIL: ${{ vars.JIRA_API_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+    steps:
+      - name: Create Jira Issue
+        id: create
+        run: |
+          base_description="A request for Test Engineering support was submitted via a GitHub Pull Request."
+
+          if [ -n "${{ needs.fetch-failures.outputs.markdown_fragment }}" ]; then
+            final_description="$base_description
+
+          ${{ needs.fetch-failures.outputs.markdown_fragment }}"
+          else
+            final_description="$base_description"
+          fi
+
+          echo "Creating Jira issue with description:"
+          echo "$final_description"
+
+          RESPONSE=$(curl -s -X POST -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"fields\": {
+                \"project\": { \"key\": \"TE\" },
+                \"summary\": \"Automated issue from PR #${{ inputs.pr_number }}: ${{ needs.fetch-pr-info.outputs.pr_title }}\",
+                \"description\": \"$final_description\",
+                \"issuetype\": { \"name\": \"Incident Response\" }
+              }
+            }" \
+            "$JIRA_SITE_URL/rest/api/3/issue")
+
+          ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.key')
+          echo "issue=$ISSUE_KEY" >> $GITHUB_OUTPUT
+
+
+      - name: Assign Jira Ticket
+        run: |
+          accountId=$(curl -s -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+            -G --data-urlencode "query=$JIRA_USER_EMAIL" \
+            "$JIRA_SITE_URL/rest/api/3/user/search" | jq -r '.[0].accountId')
+
+          if [ -z "$accountId" ] || [ "$accountId" = "null" ]; then
+            echo "⚠️ No Jira account ID found for $JIRA_USER_EMAIL. Skipping assignment."
+            exit 0
+          fi
+
+          echo "Assigning ticket to accountId: $accountId"
+
+          curl -X PUT -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "$(jq -n --arg accountId "$accountId" '{accountId: $accountId}')" \
+            "$JIRA_SITE_URL/rest/api/3/issue/${{ steps.create.outputs.issue }}/assignee"
+
+      - name: Transition Jira Issue to "Open"
+        run: |
+          curl -X POST -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{"transition":{"id":"21"}}' \
+            "$JIRA_SITE_URL/rest/api/3/issue/${{ steps.create.outputs.issue }}/transitions"
+
+      - name: Set Output Data
+        id: set-url
+        run: |
+          echo "repo_name=$(echo '${{ github.repository }}' | cut -d'/' -f2 | tr 'a-z' 'A-Z')" >> $GITHUB_OUTPUT
+          echo "id=${{ steps.create.outputs.issue }}" >> $GITHUB_OUTPUT
+          echo "url=$JIRA_SITE_URL/browse/${{ steps.create.outputs.issue }}"

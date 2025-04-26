@@ -1,0 +1,46 @@
+name: Fetch Failures
+
+on:
+  workflow_call:
+    inputs:
+      pr_head_sha:
+        required: true
+        type: string
+    outputs:
+      markdown_fragment:
+        description: "Markdown fragment listing external check failures"
+        value: ${{ jobs.detect.outputs.markdown_fragment }}
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      markdown_fragment: ${{ steps.generate.outputs.markdown_fragment }}
+    steps:
+      - name: Detect External Failures
+        id: generate
+        run: |
+          # Call GitHub API to fetch check runs for the PR SHA
+          CHECK_RUNS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/commits/${{ inputs.pr_head_sha }}/check-runs")
+
+          FAILURES=$(echo "$CHECK_RUNS" | jq -r '
+            .check_runs[]
+            | select(
+                (.app.name == "Currents" or .app.name == "Argos CI")
+                and (.conclusion != "success")
+              )
+            | "| \(.app.name) | \(.name) | \(.conclusion) | [View Report](\(.details_url)) |"
+          ')
+
+          if [ -n "$FAILURES" ]; then
+            MARKDOWN="| App | Name | Status | Details URL |
+            |:----|:-----|:-------|:------------|
+            $FAILURES"
+            echo "markdown_fragment<<EOF" >> $GITHUB_OUTPUT
+            echo "$MARKDOWN" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "markdown_fragment=" >> $GITHUB_OUTPUT
+          fi
