@@ -28,30 +28,29 @@ jobs:
       id: fetch
       run: |
         echo "Fetching PR details from repo: ${{ inputs.repo_name }} and PR #${{ inputs.pr_number }}..."
-
+    
         API_URL="https://api.github.com/repos/${{ inputs.repo_name }}/pulls/${{ inputs.pr_number }}"
         
         HTTP_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" "$API_URL")
-
+    
         # Separate body and status
         HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed -e 's/HTTPSTATUS\:.*//g')
         HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
-
+    
         if [ "$HTTP_STATUS" -ne 200 ]; then
           echo "❌ GitHub API returned HTTP status $HTTP_STATUS"
           echo "Response: $HTTP_BODY"
           exit 1
         fi
-
+    
         PR_TITLE=$(echo "$HTTP_BODY" | jq -r '.title')
         PR_HEAD_SHA=$(echo "$HTTP_BODY" | jq -r '.head.sha')
-
+    
         echo "Fetched PR Title: $PR_TITLE"
         echo "Fetched PR Head SHA: $PR_HEAD_SHA"
-
+    
         echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
         echo "pr_head_sha=$PR_HEAD_SHA" >> $GITHUB_OUTPUT
-
 
   fetch-failures:
     needs: fetch-pr-info
