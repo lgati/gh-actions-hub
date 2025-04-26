@@ -5,8 +5,12 @@ on:
     inputs:
       pr_number:
         description: "Pull Request Number"
-        default: 1
         required: true
+        type: string
+      repo_name:
+        description: "Repository name (format: owner/repo)"
+        required: false
+        default: "lgati/gh-mock-checks-app"
         type: string
 
 jobs:
@@ -19,14 +23,17 @@ jobs:
       - name: Fetch PR Title and Head SHA
         id: fetch
         run: |
-          echo "Fetching PR details..."
+          echo "Fetching PR details from repo: ${{ inputs.repo_name }} and PR #${{ inputs.pr_number }}..."
 
           RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ inputs.pr_number }}")
+            "https://api.github.com/repos/${{ inputs.repo_name }}/pulls/${{ inputs.pr_number }}")
 
           PR_TITLE=$(echo "$RESPONSE" | jq -r '.title')
           PR_HEAD_SHA=$(echo "$RESPONSE" | jq -r '.head.sha')
+
+          echo "Fetched PR Title: $PR_TITLE"
+          echo "Fetched PR Head SHA: $PR_HEAD_SHA"
 
           echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
           echo "pr_head_sha=$PR_HEAD_SHA" >> $GITHUB_OUTPUT
@@ -36,6 +43,7 @@ jobs:
     uses: ./.github/workflows/fetch-failures.yml
     with:
       pr_head_sha: ${{ needs.fetch-pr-info.outputs.pr_head_sha }}
+      repo_name: ${{ inputs.repo_name }}
 
   create-jira-ticket:
     needs: [fetch-pr-info, fetch-failures]
@@ -52,8 +60,7 @@ jobs:
 
           if [ -n "${{ needs.fetch-failures.outputs.markdown_fragment }}" ]; then
             final_description="$base_description
-
-          ${{ needs.fetch-failures.outputs.markdown_fragment }}"
+            ${{ needs.fetch-failures.outputs.markdown_fragment }}"
           else
             final_description="$base_description"
           fi
@@ -76,6 +83,7 @@ jobs:
 
           ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.key')
           echo "issue=$ISSUE_KEY" >> $GITHUB_OUTPUT
+
 
 
       - name: Assign Jira Ticket
