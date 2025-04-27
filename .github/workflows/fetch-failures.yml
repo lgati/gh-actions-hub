@@ -20,13 +20,13 @@ jobs:
     outputs:
       markdown_fragment: ${{ steps.generate.outputs.markdown_fragment }}
     steps:
-      - name: Fetch Check Runs
+      - name: Fetch Check Runs (Argos)
         id: fetch-check-runs
         run: |
           echo "Fetching check-runs for commit: ${{ inputs.pr_head_sha }} in repo: ${{ inputs.repo_name }}..."
       
           API_URL="https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/check-runs"
-          CHECK_RUNS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ vars.GHA_PAT }}}" \
+          CHECK_RUNS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ vars.GHA_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$API_URL")
       
@@ -46,9 +46,8 @@ jobs:
           echo "$FAILURES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
       
-      - name: Fetch Statuses if Needed
+      - name: Fetch Statuses (Currents)
         id: fetch-statuses
-        if: env.FAILURES_CHECK_RUNS == ''
         run: |
           echo "No check-run failures found. Fetching commit statuses instead..."
       
