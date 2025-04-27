@@ -128,12 +128,12 @@ jobs:
             --data "$(jq -n --arg accountId "$accountId" '{accountId: $accountId}')" \
             "$JIRA_BASE_URL/rest/api/3/issue/${{ steps.create.outputs.issue }}/assignee"
 
-      # - name: Transition Jira Issue to "Open"
-      #   run: |
-      #     curl -X POST -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
-      #       -H "Content-Type: application/json" \
-      #       --data '{"transition":{"id":"21"}}' \
-      #       "$JIRA_BASE_URL/rest/api/3/issue/${{ steps.create.outputs.issue }}/transitions"
+      - name: Transition Jira Issue to "Open"
+        run: |
+          curl -X POST -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{"transition":{"id":"21"}}' \
+            "$JIRA_BASE_URL/rest/api/3/issue/${{ steps.create.outputs.issue }}/transitions"
 
       - name: Set Output Data
         id: set-url
