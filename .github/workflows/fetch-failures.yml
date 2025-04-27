@@ -20,89 +20,46 @@ jobs:
     outputs:
       markdown_fragment: ${{ steps.build-markdown.outputs.markdown_fragment }}
     steps:
-      - name: Fetch Check Runs (Argos)
-        id: fetch-check-runs
-        run: |
-          echo "Fetching check-runs for commit: ${{ inputs.pr_head_sha }} in repo: ${{ inputs.repo_name }}..."
-      
-          API_URL="https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/check-runs"
-          CHECK_RUNS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ vars.GHA_PAT }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "$API_URL")
-      
-          echo "Raw CHECK_RUNS response:"
-          echo "$CHECK_RUNS_RESPONSE"
-      
-          FAILURES=$(echo "$CHECK_RUNS_RESPONSE" | jq -r '
-            (.check_runs // [])[]
-            | select(
-                (.name | test("Argos"; "i"))  # Case insensitive match for "Argos"
-                and (.conclusion != "success")
-              )
-            | "| \(.name) | \(.conclusion) | [View Check|\(.html_url // .details_url // .url)] |"
-          ')
-      
-          echo "FAILURES_CHECK_RUNS<<EOF" >> $GITHUB_ENV
-          echo "$FAILURES" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-      
-      - name: Fetch Statuses (Currents)
+      - name: Fetch Statuses (Argos + Currents)
         id: fetch-statuses
         run: |
-          echo "No check-run failures found. Fetching commit statuses instead..."
-      
+          echo "Fetching commit statuses for: ${{ inputs.pr_head_sha }} in repo: ${{ inputs.repo_name }}..."
+
           STATUS_URL="https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/statuses"
           STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ vars.GHA_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$STATUS_URL")
-      
+
           echo "Raw STATUS_RESPONSE:"
           echo "$STATUS_RESPONSE"
-      
+
           FAILURES=$(echo "$STATUS_RESPONSE" | jq -r '
-            (. // [])
+            [.[] | select(
+              (.state == "failure") and
+              (.context | test("argos"; "i") or test("currents"; "i"))
+            )]
+            | map("| \(.context) | \(.description) | \(.state) | [View Details](\(.target_url // "#")) |")
             | .[]
-            | select(
-                (.context | contains("Currents") or contains("Argos"))
-                and (.state != "success")
-              )
-            | "| \(.context) | \(.state) | [View Status|\(.target_url // "#")] |"
           ')
-      
-          echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
+
+          echo "FAILURES<<EOF" >> $GITHUB_ENV
           echo "$FAILURES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-      
+
       - name: Build Markdown Output
         id: build-markdown
         run: |
-          FINAL_FAILURES=""
+          if [ -n "$FAILURES" ]; then
+            echo "Detected failures:"
+            echo "$FAILURES"
 
-          if [ -n "$FAILURES_CHECK_RUNS" ]; then
-            FINAL_FAILURES="$FAILURES_CHECK_RUNS"
-          fi
+            MARKDOWN="|| Context || Description || Status || Details ||
+            $FAILURES"
 
-          if [ -n "$FAILURES_STATUSES" ]; then
-            if [ -n "$FINAL_FAILURES" ]; then
-              FINAL_FAILURES="$FINAL_FAILURES"$'\n'"$FAILURES_STATUSES"
-            else
-              FINAL_FAILURES="$FAILURES_STATUSES"
-            fi
-          fi
-
-          if [ -n "$FINAL_FAILURES" ]; then
-            echo "Detected combined failures:"
-            echo "$FINAL_FAILURES"
-            
-            HEADER="|| Check Name || Status || Details ||"
-
-            MARKDOWN=$HEADER
-            $FINAL_FAILURES"
-            
             echo "markdown_fragment<<EOF" >> $GITHUB_OUTPUT
             echo "$MARKDOWN" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           else
-            echo "✅ No failing checks or statuses detected."
+            echo "✅ No failing statuses detected."
             echo "markdown_fragment=" >> $GITHUB_OUTPUT
           fi
