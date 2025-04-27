@@ -20,61 +20,75 @@ jobs:
     outputs:
       markdown_fragment: ${{ steps.generate.outputs.markdown_fragment }}
     steps:
-      - name: Detect Failing External Checks (Check-runs + Statuses)
-        id: detect
-        run: |
-          echo "Fetching check-runs for commit: ${{ inputs.pr_head_sha }} in repo: ${{ inputs.repo_name }}..."
-      
-          # Fetch Check Runs first
-          API_URL="https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/check-runs"
-          CHECK_RUNS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "$API_URL")
-      
-          FAILURES=$(echo "$CHECK_RUNS_RESPONSE" | jq -r '
-            (.check_runs // [])[]
-            | select(
-                (.name | contains("Currents") or contains("Argos"))
-                and (.conclusion != "success")
+    - name: Fetch Check Runs
+      id: fetch-check-runs
+      run: |
+        echo "Fetching check-runs for commit: ${{ inputs.pr_head_sha }} in repo: ${{ inputs.repo_name }}..."
+
+        API_URL="https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/check-runs"
+        CHECK_RUNS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "$API_URL")
+
+        FAILURES=$(echo "$CHECK_RUNS_RESPONSE" | jq -r '
+          (.check_runs // [])[]
+          | select(
+              (.name | contains("Currents") or contains("Argos"))
+              and (.conclusion != "success")
+            )
+          | "| \(.name) | \(.conclusion) | [View Check](\(.html_url // .details_url // .url)) |"
+        ')
+
+        echo "FAILURES_CHECK_RUNS<<EOF" >> $GITHUB_ENV
+        echo "$FAILURES" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+
+    - name: Fetch Statuses if Needed
+      id: fetch-statuses
+      if: env.FAILURES_CHECK_RUNS == ''
+      run: |
+        echo "No check-run failures found. Fetching commit statuses instead..."
+
+        STATUS_URL="https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/statuses"
+        STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "$STATUS_URL")
+
+        FAILURES=$(echo "$STATUS_RESPONSE" | jq -r '
+          (. // [])
+          | map(
+              select(
+                (.context | contains("Currents") or contains("Argos"))
+                and (.state != "success")
               )
-            | "| \(.name) | \(.conclusion) | [View Check](\(.html_url // .details_url // .url)) |"
-          ')
-      
-          if [ -n "$FAILURES" ]; then
-            echo "✅ Failures detected via check-runs."
-          else
-            echo "ℹ️ No failures via check-runs. Checking commit statuses..."
-      
-            # Fetch Statuses as fallback
-            STATUS_URL="https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/statuses"
-            STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "$STATUS_URL")
-      
-            FAILURES=$(echo "$STATUS_RESPONSE" | jq -r '
-              (. // [])
-              | map(
-                  select(
-                    (.context | contains("Currents") or contains("Argos"))
-                    and (.state != "success")
-                  )
-                )
-              | .[]
-              | "| \(.context) | \(.state) | [View Status](\(.target_url // "#")) |"
-            ')
-          fi
-      
-          if [ -n "$FAILURES" ]; then
-            echo "Detected failures:"
-            echo "$FAILURES"
-            MARKDOWN="| Check Name | Status | Details |
+            )
+          | .[]
+          | "| \(.context) | \(.state) | [View Status](\(.target_url // "#")) |"
+        ')
+
+        echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
+        echo "$FAILURES" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+
+    - name: Build Markdown Output
+      id: build-markdown
+      run: |
+        FINAL_FAILURES="$FAILURES_CHECK_RUNS"
+
+        if [ -z "$FINAL_FAILURES" ]; then
+          FINAL_FAILURES="$FAILURES_STATUSES"
+        fi
+
+        if [ -n "$FINAL_FAILURES" ]; then
+          echo "Detected failures:"
+          echo "$FINAL_FAILURES"
+          MARKDOWN="| Check Name | Status | Details |
           |:-----------|:-------|:--------|
-          $FAILURES"
-                echo "markdown_fragment<<EOF" >> $GITHUB_OUTPUT
-                echo "$MARKDOWN" >> $GITHUB_OUTPUT
-                echo "EOF" >> $GITHUB_OUTPUT
-              else
-                echo "✅ No failing checks or statuses detected."
-                echo "markdown_fragment=" >> $GITHUB_OUTPUT
-              fi
-      
+          $FINAL_FAILURES"
+          echo "markdown_fragment<<EOF" >> $GITHUB_OUTPUT
+          echo "$MARKDOWN" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        else
+          echo "✅ No failing checks or statuses detected."
+          echo "markdown_fragment=" >> $GITHUB_OUTPUT
+        fi
