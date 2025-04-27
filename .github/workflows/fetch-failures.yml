@@ -40,7 +40,7 @@ jobs:
                 (.context | contains("Currents") or contains("argos") or contains("Argos"))
                 and (.state == "failure")
               )
-            | "| \(.context) | \(.description) | ❌ Failure | [View Details|\(.target_url // "#")] |"
+            | "| [\(.context)|\(.target_url // "#")] | \(.description) |"
           ')
 
           echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
@@ -55,9 +55,9 @@ jobs:
             echo "$FAILURES_STATUSES"
 
             HEADER="----
-            *Detected External Failures:*
+            ❌ *Detected External Failures:*
 
-            || Check || Description || Status || Link ||"
+            || Failing Checks || Summary ||"
 
             MARKDOWN="$HEADER"$'\n'"$FAILURES_STATUSES"
 
