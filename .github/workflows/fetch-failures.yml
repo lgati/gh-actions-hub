@@ -33,15 +33,22 @@ jobs:
           echo "Raw STATUS_RESPONSE:"
           echo "$STATUS_RESPONSE"
 
-          FAILURES_STATUSES=$(echo "$STATUS_RESPONSE" | jq -r '
-            (. // [])
-            | .[]
-            | select(
-                (.context | contains("Currents") or contains("argos") or contains("Argos"))
-                and (.state == "failure")
-              )
-            | "| [\(.context)|\(.target_url // "#")] | \(.description) |"
-          ')
+          # Parse the statuses, sanitize context, build table rows
+          FAILURES_STATUSES=""
+          for row in $(echo "$STATUS_RESPONSE" | jq -c '.[]'); do
+            state=$(echo "$row" | jq -r '.state')
+            context=$(echo "$row" | jq -r '.context')
+            target_url=$(echo "$row" | jq -r '.target_url')
+            description=$(echo "$row" | jq -r '.description')
+
+            # Only failure state and matching Currents/Argos context
+            if [[ "$state" == "failure" ]] && ([[ "$context" == *"Currents"* ]] || [[ "$context" == *"argos"* ]] || [[ "$context" == *"Argos"* ]]); then
+              # Sanitize context (remove "|")
+              SAFE_CONTEXT=$(echo "$context" | sed 's/|//g')
+              # Append to failures
+              FAILURES_STATUSES+=$'| ['$SAFE_CONTEXT'|'${target_url:-"#"}'] | '"$description"$'\n'
+            fi
+          done
 
           echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
           echo "$FAILURES_STATUSES" >> $GITHUB_ENV
@@ -55,9 +62,9 @@ jobs:
             echo "$FAILURES_STATUSES"
 
             HEADER="----
-            ❌ *Detected External Failures:*
+            🚨 *Detected External Failures:*
 
-            || Failing Checks || Summary ||"
+            || Failing Tests || Description ||"
 
             MARKDOWN="$HEADER"$'\n'"$FAILURES_STATUSES"
 
