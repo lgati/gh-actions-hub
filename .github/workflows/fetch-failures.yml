@@ -39,7 +39,7 @@ jobs:
                 (.name | test("Argos"; "i"))  # Case insensitive match for "Argos"
                 and (.conclusion != "success")
               )
-            | "| \(.name) | \(.conclusion) | [View Check](\(.html_url // .details_url // .url)) |"
+            | "| \(.name) | \(.conclusion) | [View Check|\(.html_url // .details_url // .url)] |"
           ')
       
           echo "FAILURES_CHECK_RUNS<<EOF" >> $GITHUB_ENV
@@ -66,7 +66,7 @@ jobs:
                 (.context | contains("Currents") or contains("Argos"))
                 and (.state != "success")
               )
-            | "| \(.context) | \(.state) | [View Status](\(.target_url // "#")) |"
+            | "| \(.context) | \(.state) | [View Status|\(.target_url // "#")] |"
           ')
       
           echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
@@ -94,9 +94,10 @@ jobs:
             echo "Detected combined failures:"
             echo "$FINAL_FAILURES"
             
-            MARKDOWN="| Check Name | Status | Details |
-          |:-----------|:-------|:--------|
-          $FINAL_FAILURES"
+            HEADER="|| Check Name || Status || Details ||"
+
+            MARKDOWN="$HEADER
+            $FINAL_FAILURES"
             
             echo "markdown_fragment<<EOF" >> $GITHUB_OUTPUT
             echo "$MARKDOWN" >> $GITHUB_OUTPUT
