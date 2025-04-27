@@ -96,8 +96,13 @@ jobs:
             
             HEADER="|| Check Name || Status || Details ||"
 
-            MARKDOWN="$HEADER
-            $FINAL_FAILURES"
+            MARKDOWN="<details>
+            <summary>Click to view failing checks</summary>
+            
+            $HEADER
+            $FINAL_FAILURES
+            
+            </details>"
             
             echo "markdown_fragment<<EOF" >> $GITHUB_OUTPUT
             echo "$MARKDOWN" >> $GITHUB_OUTPUT
