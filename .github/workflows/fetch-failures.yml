@@ -20,7 +20,7 @@ jobs:
     outputs:
       markdown_fragment: ${{ steps.build-markdown.outputs.markdown_fragment }}
     steps:
-      - name: Fetch Statuses (Argos + Currents)
+      - name: Fetch Statuses (Currents and Argos)
         id: fetch-statuses
         run: |
           echo "Fetching commit statuses for: ${{ inputs.pr_head_sha }} in repo: ${{ inputs.repo_name }}..."
@@ -33,28 +33,33 @@ jobs:
           echo "Raw STATUS_RESPONSE:"
           echo "$STATUS_RESPONSE"
 
-          FAILURES=$(echo "$STATUS_RESPONSE" | jq -r '
-            [.[] | select(
-              (.state == "failure") and
-              (.context | test("argos"; "i") or test("currents"; "i"))
-            )]
-            | map("| \(.context) | \(.description) | \(.state) | [View Details|\(.target_url // "#")] |")
+          FAILURES_STATUSES=$(echo "$STATUS_RESPONSE" | jq -r '
+            (. // [])
             | .[]
+            | select(
+                (.context | contains("Currents") or contains("argos") or contains("Argos"))
+                and (.state == "failure")
+              )
+            | "| \(.context) | \(.description) | ❌ Failure | [View Details|\(.target_url // "#")] |"
           ')
 
-          echo "FAILURES<<EOF" >> $GITHUB_ENV
-          echo "$FAILURES" >> $GITHUB_ENV
+          echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
+          echo "$FAILURES_STATUSES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       - name: Build Markdown Output
         id: build-markdown
         run: |
-          if [ -n "$FAILURES" ]; then
-            echo "Detected failures:"
-            echo "$FAILURES"
+          if [ -n "$FAILURES_STATUSES" ]; then
+            echo "Detected external failures:"
+            echo "$FAILURES_STATUSES"
 
-            MARKDOWN="|| Context || Description || Status || Details ||
-            $FAILURES"
+            HEADER="----
+            *Detected External Failures:*
+
+            || Check || Description || Status || Link ||"
+
+            MARKDOWN="$HEADER"$'\n'"$FAILURES_STATUSES"
 
             echo "markdown_fragment<<EOF" >> $GITHUB_OUTPUT
             echo "$MARKDOWN" >> $GITHUB_OUTPUT
