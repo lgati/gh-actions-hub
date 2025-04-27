@@ -48,28 +48,26 @@ jobs:
       if: env.FAILURES_CHECK_RUNS == ''
       run: |
         echo "No check-run failures found. Fetching commit statuses instead..."
-
+    
         STATUS_URL="https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/statuses"
         STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
           -H "Accept: application/vnd.github.v3+json" \
           "$STATUS_URL")
-
+    
         FAILURES=$(echo "$STATUS_RESPONSE" | jq -r '
           (. // [])
-          | map(
-              select(
-                (.context | contains("Currents") or contains("Argos"))
-                and (.state != "success")
-              )
-            )
           | .[]
+          | select(
+              (.context | contains("Currents") or contains("Argos"))
+              and (.state != "success")
+            )
           | "| \(.context) | \(.state) | [View Status](\(.target_url // "#")) |"
         ')
-
+    
         echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
         echo "$FAILURES" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
-
+      
     - name: Build Markdown Output
       id: build-markdown
       run: |
