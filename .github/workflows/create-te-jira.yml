@@ -93,6 +93,9 @@ jobs:
             final_description="$base_description"
           fi
 
+          echo "Final Jira Description:"
+          echo "$final_description"
+
           echo "FINAL_DESCRIPTION<<EOF" >> $GITHUB_ENV
           echo "$final_description" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
