@@ -88,7 +88,7 @@ jobs:
           if [ -n "$MARKDOWN_FRAGMENT" ]; then
             final_description="$base_description
 
-            MARKDOWN_FRAGMENT"
+            $MARKDOWN_FRAGMENT"
           else
             final_description="$base_description"
           fi
