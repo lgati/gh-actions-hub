@@ -36,7 +36,7 @@ jobs:
           FAILURES=$(echo "$CHECK_RUNS_RESPONSE" | jq -r '
             (.check_runs // [])[]
             | select(
-                (.name | contains("Currents") or contains("Argos"))
+                (.name | test("Argos"; "i"))  # Case insensitive match for "Argos"
                 and (.conclusion != "success")
               )
             | "| \(.name) | \(.conclusion) | [View Check](\(.html_url // .details_url // .url)) |"
@@ -53,7 +53,7 @@ jobs:
           echo "No check-run failures found. Fetching commit statuses instead..."
       
           STATUS_URL="https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/statuses"
-          STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ vars.GHA_PAT }}}" \
+          STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ vars.GHA_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$STATUS_URL")
       
