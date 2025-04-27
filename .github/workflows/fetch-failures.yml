@@ -38,7 +38,8 @@ jobs:
               (.state == "failure") and
               (.context | test("argos"; "i") or test("currents"; "i"))
             )]
-            | "| \(.context) | \(.description) | \(.state) | [View Details|\(.target_url // "#")] |"
+            | map("| \(.context) | \(.description) | \(.state) | [View Details|\(.target_url // "#")] |")
+            | .[]
           ')
 
           echo "FAILURES<<EOF" >> $GITHUB_ENV
