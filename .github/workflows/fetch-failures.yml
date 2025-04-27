@@ -18,7 +18,7 @@ jobs:
   detect:
     runs-on: ubuntu-latest
     outputs:
-      markdown_fragment: ${{ steps.generate.outputs.markdown_fragment }}
+      markdown_fragment: ${{ steps.build-markdown.outputs.markdown_fragment }}
     steps:
       - name: Fetch Check Runs (Argos)
         id: fetch-check-runs
