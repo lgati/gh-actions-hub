@@ -80,13 +80,15 @@ jobs:
 
       - name: Build Jira Ticket Description
         id: build-description
+        env:
+          MARKDOWN_FRAGMENT: ${{ needs.fetch-failures.outputs.markdown_fragment }}
         run: |
           base_description="A request for Test Engineering support was submitted via a GitHub Pull Request."
 
-          if [ -n "${{ needs.fetch-failures.outputs.markdown_fragment }}" ]; then
+          if [ -n "$MARKDOWN_FRAGMENT" ]; then
             final_description="$base_description
 
-            ${{ needs.fetch-failures.outputs.markdown_fragment }}"
+            MARKDOWN_FRAGMENT"
           else
             final_description="$base_description"
           fi
