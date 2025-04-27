@@ -76,18 +76,28 @@ jobs:
       - name: Build Markdown Output
         id: build-markdown
         run: |
-          FINAL_FAILURES="$FAILURES_CHECK_RUNS"
-      
-          if [ -z "$FINAL_FAILURES" ]; then
-            FINAL_FAILURES="$FAILURES_STATUSES"
+          FINAL_FAILURES=""
+
+          if [ -n "$FAILURES_CHECK_RUNS" ]; then
+            FINAL_FAILURES="$FAILURES_CHECK_RUNS"
           fi
-      
+
+          if [ -n "$FAILURES_STATUSES" ]; then
+            if [ -n "$FINAL_FAILURES" ]; then
+              FINAL_FAILURES="$FINAL_FAILURES"$'\n'"$FAILURES_STATUSES"
+            else
+              FINAL_FAILURES="$FAILURES_STATUSES"
+            fi
+          fi
+
           if [ -n "$FINAL_FAILURES" ]; then
-            echo "Detected failures:"
+            echo "Detected combined failures:"
             echo "$FINAL_FAILURES"
+            
             MARKDOWN="| Check Name | Status | Details |
-            |:-----------|:-------|:--------|
-            $FINAL_FAILURES"
+          |:-----------|:-------|:--------|
+          $FINAL_FAILURES"
+            
             echo "markdown_fragment<<EOF" >> $GITHUB_OUTPUT
             echo "$MARKDOWN" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
@@ -95,4 +105,3 @@ jobs:
             echo "✅ No failing checks or statuses detected."
             echo "markdown_fragment=" >> $GITHUB_OUTPUT
           fi
-    
