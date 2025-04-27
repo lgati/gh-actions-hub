@@ -26,7 +26,7 @@ jobs:
           echo "Fetching check-runs for commit: ${{ inputs.pr_head_sha }} in repo: ${{ inputs.repo_name }}..."
       
           API_URL="https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/check-runs"
-          CHECK_RUNS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          CHECK_RUNS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ vars.GHA_PAT }}}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$API_URL")
       
@@ -53,7 +53,7 @@ jobs:
           echo "No check-run failures found. Fetching commit statuses instead..."
       
           STATUS_URL="https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/statuses"
-          STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ vars.GHA_PAT }}}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$STATUS_URL")
       
