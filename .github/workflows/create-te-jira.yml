@@ -100,15 +100,58 @@ jobs:
           echo "$final_description" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: Create Jira issue (real)
+      # - name: Create Jira issue (real)
+      #   id: create
+      #   uses: atlassian/gajira-create@v3
+      #   with:
+      #     project: GH
+      #     issuetype: Task
+      #     summary: >
+      #       [${{ env.REPO_NAME }}] Issue detected on PR #${{ inputs.pr_number }}: ${{ needs.fetch-pr-info.outputs.pr_title }}
+      #     description: ${{ env.FINAL_DESCRIPTION }}
+
+
+      - name: Create Jira issue (with curl, testing panel rendering)
         id: create
-        uses: atlassian/gajira-create@v3
-        with:
-          project: GH
-          issuetype: Task
-          summary: >
-            [${{ env.REPO_NAME }}] Issue detected on PR #${{ inputs.pr_number }}: ${{ needs.fetch-pr-info.outputs.pr_title }}
-          description: ${{ env.FINAL_DESCRIPTION }}
+        run: |
+          echo "Creating Jira Issue using curl with panel formatting..."
+
+          JIRA_API_URL="$JIRA_BASE_URL/rest/api/3/issue"
+
+          DESCRIPTION_CONTENT="{panel:title=Detected Failures|borderStyle=dashed|borderColor=#ccc|titleBGColor=#F7D6C1|bgColor=#FFFFCE}
+          *This is a test panel*
+          - Detected some failures
+          {panel}"
+
+              # Prepare payload
+              PAYLOAD=$(jq -n \
+                --arg project "GH" \
+                --arg summary "[${{ env.REPO_NAME }}] Issue detected on PR #${{ inputs.pr_number }}: ${{ needs.fetch-pr-info.outputs.pr_title }}" \
+                --arg description "$DESCRIPTION_CONTENT" \
+                '{fields: {project: {key: $project}, summary: $summary, description: $description, issuetype: {name: "Task"}}}'
+              )
+
+              # Call Jira
+              RESPONSE=$(curl -s -X POST \
+                -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+                -H "Content-Type: application/json" \
+                --data "$PAYLOAD" \
+                "$JIRA_API_URL")
+
+              echo "Raw Jira Response:"
+              echo "$RESPONSE"
+
+              ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.key')
+
+              if [ "$ISSUE_KEY" == "null" ] || [ -z "$ISSUE_KEY" ]; then
+                echo "❌ Failed to create Jira issue."
+                exit 1
+              fi
+
+              echo "Created Jira issue: $ISSUE_KEY"
+
+              echo "issue=$ISSUE_KEY" >> $GITHUB_OUTPUT
+
 
       - name: Assign Jira Ticket
         run: |
