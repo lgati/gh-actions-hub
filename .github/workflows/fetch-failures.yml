@@ -33,18 +33,13 @@ jobs:
             -H "Accept: application/vnd.github.v3+json" \
             "$STATUS_URL")
       
-          echo "Raw STATUS_RESPONSE:"
+          echo "==== RAW STATUS_RESPONSE ===="
           echo "$STATUS_RESPONSE"
-      
-          # Validate if response is valid JSON
-          if ! echo "$STATUS_RESPONSE" | jq empty; then
-            echo "❌ ERROR: Failed to parse STATUS_RESPONSE. Invalid JSON returned."
-            exit 1
-          fi
+          echo "=============================="
       
           FAILURES_STATUSES=""
       
-          for row in $(echo "$STATUS_RESPONSE" | jq -c '.[]'); do
+          while read -r row; do
             state=$(echo "$row" | jq -r '.state')
             context=$(echo "$row" | jq -r '.context')
             target_url=$(echo "$row" | jq -r '.target_url')
@@ -54,11 +49,12 @@ jobs:
               SAFE_CONTEXT=$(echo "$context" | sed 's/|//g')
               FAILURES_STATUSES+=$'- *['$SAFE_CONTEXT']('${target_url:-"#"}')*: '"$description"$'\n'
             fi
-          done
+          done < <(echo "$STATUS_RESPONSE" | jq -c '.[]')
       
           echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
           echo "$FAILURES_STATUSES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
+    
     
       - name: Build Markdown Output
         id: build-markdown
