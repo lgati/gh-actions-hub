@@ -111,15 +111,16 @@ jobs:
             - *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]
 
             {panel:title=Pull Request Info|borderStyle=solid|borderColor=#ccc|backgroundColor=#f9f9f9}
-            *Pull Request:* [#${{ github.event.issue.number }} - ${{ github.event.issue.title }}|${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}]  
-            *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]  
             *Repository:* {{${{ env.REPO_NAME }}}}
+            *URL:* [#${{ github.event.issue.number }} - ${{ github.event.issue.title }}|${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}]  
+            *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]  
             {panel}
-
 
             ${{ needs.fetch-failures.outputs.markdown_fragment }}
 
+            {warning:title=Attention!}
             Please review the PR and keep the ticket up-to-date with the progress status.
+            {warning}
 
       - name: Assign Jira Ticket
         run: |
