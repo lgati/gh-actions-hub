@@ -8,7 +8,7 @@ on:
         type: string
       jira_user_email:
         required: true
-        type: string    
+        type: string
     outputs:
       repo_name:
         description: "Uppercase name of the repository"
@@ -30,53 +30,12 @@ permissions:
   pull-requests: read
 
 jobs:
-  fetch-pr-info:
-    runs-on: ubuntu-latest
-    outputs:
-      pr_title: ${{ steps.fetch.outputs.pr_title }}
-      pr_head_sha: ${{ steps.fetch.outputs.pr_head_sha }}
-    steps:
-      - name: Fetch PR Title and Head SHA
-        id: fetch
-        run: |
-          echo "Fetching PR details from repo: ${{ github.repository }} and PR #${{ github.event.issue.number }}..."
-
-          API_URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}"
-          
-          HTTP_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "$API_URL")
-
-          HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed -e 's/HTTPSTATUS\:.*//g')
-          HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
-
-          if [ "$HTTP_STATUS" -ne 200 ]; then
-            echo "❌ GitHub API returned HTTP status $HTTP_STATUS"
-            echo "Response: $HTTP_BODY"
-            exit 1
-          fi
-
-          PR_TITLE=$(echo "$HTTP_BODY" | jq -r '.title')
-          PR_HEAD_SHA=$(echo "$HTTP_BODY" | jq -r '.head.sha')
-
-          echo "Fetched PR Title: $PR_TITLE"
-          echo "Fetched PR Head SHA: $PR_HEAD_SHA"
-
-          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
-          echo "pr_head_sha=$PR_HEAD_SHA" >> $GITHUB_OUTPUT
-
   fetch-failures:
-    needs: fetch-pr-info
     uses: ./.github/workflows/fetch-failures.yml
-    with:
-      pr_head_sha: ${{ needs.fetch-pr-info.outputs.pr_head_sha }}
-      repo_name: ${{ github.repository }}
     secrets: inherit
 
-
   create-jira-ticket:
-    needs: [fetch-pr-info, fetch-failures]
+    needs: fetch-failures
     runs-on: ubuntu-latest
     env:
       JIRA_BASE_URL: ${{ inputs.jira_base_url }}
@@ -84,8 +43,8 @@ jobs:
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
     outputs:
       repo_name: ${{ steps.set-url.outputs.repo_name }}
-      jira_ticket_id: ${{ steps.set-url.outputs.id }}
-      jira_ticket_url: ${{ steps.set-url.outputs.url }}
+      jira_ticket_id: ${{ steps.set-url.outputs.jira_ticket_id }}
+      jira_ticket_url: ${{ steps.set-url.outputs.jira_ticket_url }}
     steps:
       - name: Authenticate with Jira 
         uses: atlassian/gajira-login@v3
@@ -95,23 +54,19 @@ jobs:
         run: |
           echo "REPO_NAME=$(echo '${{ github.repository }}' | cut -d'/' -f2 | tr 'a-z' 'A-Z')" >> $GITHUB_ENV
 
-      - name: Create Jira issue (real)
+      - name: Create Jira issue
         id: create
         uses: atlassian/gajira-create@v3
         with:
           project: GH
           issuetype: Task
           summary: >
-            [${{ env.REPO_NAME }}] Issue detected on PR #${{ github.event.issue.number }}: ${{ needs.fetch-pr-info.outputs.pr_title }}
+            [${{ env.REPO_NAME }}] Issue detected on PR #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
           description: |
             {panel:title=Pull Request Info}
             *Repository:* {{${{ env.REPO_NAME }}}}
             *URL:* [#${{ github.event.issue.number }} - ${{ github.event.issue.title }}|${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}]  
             *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]  
-            {panel}
-
-            {panel:bgColor=#eae6ff|title=Additional information}
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
             {panel}
 
             ${{ needs.fetch-failures.outputs.markdown_fragment }}
@@ -149,5 +104,5 @@ jobs:
         id: set-url
         run: |
           echo "repo_name=$(echo '${{ github.repository }}' | cut -d'/' -f2 | tr 'a-z' 'A-Z')" >> $GITHUB_OUTPUT
-          echo "id=${{ steps.create.outputs.issue }}" >> $GITHUB_OUTPUT
-          echo "url=${{ inputs.jira_base_url }}/browse/${{ steps.create.outputs.issue }}" >> $GITHUB_OUTPUT
+          echo "jira_ticket_id=${{ steps.create.outputs.issue }}" >> $GITHUB_OUTPUT
+          echo "jira_ticket_url=${{ inputs.jira_base_url }}/browse/${{ steps.create.outputs.issue }}" >> $GITHUB_OUTPUT

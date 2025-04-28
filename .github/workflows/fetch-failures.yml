@@ -51,12 +51,11 @@ jobs:
         id: fetch-statuses
         run: |
           echo "Fetching commit statuses for: ${{ github.repository }} commit: $pr_head_sha..."
-      
+
           STATUS_URL="https://api.github.com/repos/${{ github.repository }}/commits/$pr_head_sha/statuses"
           STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$STATUS_URL")
-      
 
           echo "==== RAW STATUS_RESPONSE ===="
           echo "$STATUS_RESPONSE"
@@ -74,15 +73,10 @@ jobs:
 
           FAILURES_STATUSES=""
 
+          # Currents and Argos app's id's
           ALLOWED_CREATORS=("98385548" "62215774")
 
-          while read -r row; do
-            state=$(echo "$row" | jq -r '.state')
-            context=$(echo "$row" | jq -r '.context')
-            target_url=$(echo "$row" | jq -r '.target_url')
-            description=$(echo "$row" | jq -r '.description')
-            creator_id=$(echo "$row" | jq -r '.creator.id')
-
+          while read -r state context target_url description creator_id; do
             if [[ "$state" == "failure" ]]; then
               for allowed_id in "${ALLOWED_CREATORS[@]}"; do
                 if [[ "$creator_id" == "$allowed_id" ]]; then
@@ -92,7 +86,7 @@ jobs:
                 fi
               done
             fi
-          done < <(echo "$STATUS_RESPONSE" | jq -c '.[]')
+          done < <(echo "$STATUS_RESPONSE" | jq -r '.[] | [.state, .context, .target_url, .description, .creator.id] | @tsv')
 
           echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
           echo "$FAILURES_STATUSES" >> $GITHUB_ENV
