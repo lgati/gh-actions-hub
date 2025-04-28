@@ -104,30 +104,18 @@ jobs:
           summary: >
             [${{ env.REPO_NAME }}] Issue detected on PR #${{ github.event.issue.number }}: ${{ needs.fetch-pr-info.outputs.pr_title }}
           description: |
-            A request for Test Engineering support was submitted via a GitHub Pull Request.
-
-            - *Repository:* {{${{ env.REPO_NAME }}}}
-            - *Pull Request:* [#${{ github.event.issue.number }} - ${{ github.event.issue.title }}|${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}]  
-            - *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]
-
-            {panel:title=Pull Request Info|borderStyle=solid|borderColor=#ccc|backgroundColor=#f9f9f9}
+            {panel:title=Pull Request Info}
             *Repository:* {{${{ env.REPO_NAME }}}}
             *URL:* [#${{ github.event.issue.number }} - ${{ github.event.issue.title }}|${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}]  
             *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]  
             {panel}
 
-            ${{ needs.fetch-failures.outputs.markdown_fragment }}
-
-            {warning}
-            Please review the PR and keep the ticket up-to-date with the progress status.
-            {warning}
-
-            {panel:title=Attention!|borderStyle=solid|borderColor=#ccc|backgroundColor=#fefae6}
-            Please review the PR and keep the ticket up-to-date with the progress status.
+            {panel:bgColor=#eae6ff|title=Additional information}
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
             {panel}
 
-            {panel:bgColor=#fefae6|title=Attention!}
-            Please review the PR and keep the ticket up-to-date with the progress status.
+            {panel:bgColor=#ffebe6|title=Failing checks}
+            ${{ needs.fetch-failures.outputs.markdown_fragment }}
             {panel}
 
             {panel:bgColor=#fefae6}
