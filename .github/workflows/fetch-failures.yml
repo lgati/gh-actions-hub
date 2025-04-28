@@ -69,7 +69,6 @@ jobs:
 
           FAILURES_STATUSES=""
 
-          # Currents and Argos app's id's
           ALLOWED_CREATORS=("98385548" "62215774")
 
           while read -r state context target_url description creator_id; do
@@ -82,7 +81,13 @@ jobs:
                 fi
               done
             fi
-          done < <(echo "$STATUS_RESPONSE" | jq -r '.[] | [.state, .context, .target_url, .description, .creator.id] | @tsv')
+          done < <(echo "$STATUS_RESPONSE" | jq -r '.[] | [
+            (.state // ""),
+            (.context // ""),
+            (.target_url // "#"),
+            (.description // ""),
+            (.creator.id // "")
+          ] | @tsv')
 
           echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
           echo "$FAILURES_STATUSES" >> $GITHUB_ENV
