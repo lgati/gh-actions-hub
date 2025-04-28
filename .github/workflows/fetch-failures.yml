@@ -38,7 +38,7 @@ jobs:
 
           FAILURES_STATUSES=""
 
-          echo "$STATUS_RESPONSE" | jq -c '.[]' | while read -r row; do
+          for row in $(echo "$STATUS_RESPONSE" | jq -c '.[]'); do
             state=$(echo "$row" | jq -r '.state')
             context=$(echo "$row" | jq -r '.context')
             target_url=$(echo "$row" | jq -r '.target_url')
@@ -46,7 +46,7 @@ jobs:
 
             if [[ "$state" == "failure" ]] && ([[ "$context" == *"Currents"* ]] || [[ "$context" == *"argos"* ]] || [[ "$context" == *"Argos"* ]]); then
               SAFE_CONTEXT=$(echo "$context" | sed 's/|//g')
-              FAILURES_STATUSES+=$'| ['$SAFE_CONTEXT'|'${target_url:-"#"}'] | '"$description"$'\n'
+              FAILURES_STATUSES+=$'- *['$SAFE_CONTEXT']('${target_url:-"#"}')*: '"$description"$'\n'
             fi
           done
 
@@ -62,9 +62,7 @@ jobs:
             echo "$FAILURES_STATUSES"
 
             HEADER="----
-            🚨 *Detected External Failures:*
-
-            || Failing Tests || Description ||"
+            🚨 *Detected External Failures:*"
 
             MARKDOWN="$HEADER"$'\n'"$FAILURES_STATUSES"
 
