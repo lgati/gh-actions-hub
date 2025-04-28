@@ -3,9 +3,6 @@ name: Fetch Failures
 on:
   workflow_call:
     inputs:
-      pr_head_sha:
-        required: true
-        type: string
       repo_name:
         required: true
         type: string
@@ -23,34 +20,60 @@ jobs:
     outputs:
       markdown_fragment: ${{ steps.build-markdown.outputs.markdown_fragment }}
     steps:
+      - name: Fetch PR Head SHA
+        id: fetch-pr
+        run: |
+          echo "Fetching PR Head SHA from repo: ${{ github.repository }} and PR #${{ github.event.issue.number }}..."
+
+          API_URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}"
+          
+          HTTP_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "$API_URL")
+
+          HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed -e 's/HTTPSTATUS\:.*//g')
+          HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "❌ GitHub API returned HTTP status $HTTP_STATUS"
+            echo "Response: $HTTP_BODY"
+            exit 1
+          fi
+
+          PR_HEAD_SHA=$(echo "$HTTP_BODY" | jq -r '.head.sha')
+
+          echo "Fetched PR Head SHA: $PR_HEAD_SHA"
+
+          echo "pr_head_sha=$PR_HEAD_SHA" >> $GITHUB_ENV
+
       - name: Fetch Statuses (Currents and Argos)
         id: fetch-statuses
         run: |
-          echo "Fetching commit statuses for: ${{ inputs.pr_head_sha }} in repo: ${{ inputs.repo_name }}..."
-
-          STATUS_URL="https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/statuses"
+          echo "Fetching commit statuses for: ${{ github.repository }} commit: $pr_head_sha..."
+      
+          STATUS_URL="https://api.github.com/repos/${{ github.repository }}/commits/$pr_head_sha/statuses"
           STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$STATUS_URL")
+      
 
           echo "==== RAW STATUS_RESPONSE ===="
           echo "$STATUS_RESPONSE"
           echo "=============================="
 
-          # Check if STATUS_RESPONSE is valid JSON
           if [ -z "$STATUS_RESPONSE" ]; then
             echo "❌ ERROR: Empty response from GitHub API"
             exit 1
           fi
 
           if ! echo "$STATUS_RESPONSE" | jq empty; then
-            echo "❌ ERROR: Failed to parse STATUS_RESPONSE. Invalid JSON returned."
+            echo "❌ ERROR: Invalid JSON."
             exit 1
           fi
 
           FAILURES_STATUSES=""
 
-          # Currents and Argos app's id's
           ALLOWED_CREATORS=("98385548" "62215774")
 
           while read -r row; do
@@ -64,8 +87,8 @@ jobs:
               for allowed_id in "${ALLOWED_CREATORS[@]}"; do
                 if [[ "$creator_id" == "$allowed_id" ]]; then
                   SAFE_CONTEXT=$(echo "$context" | sed 's/|//g')
-                  FAILURES_STATUSES+=$'- ['$SAFE_CONTEXT'|'${target_url:-"#"}'] - '{{"$description"}}$'\n'
-                  break  # No need to check further IDs once matched
+                  FAILURES_STATUSES+=$'- *['$SAFE_CONTEXT'|'${target_url:-"#"}']*: '"$description"$'\n'
+                  break
                 fi
               done
             fi
