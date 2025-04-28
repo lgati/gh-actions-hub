@@ -64,7 +64,7 @@ jobs:
               for allowed_id in "${ALLOWED_CREATORS[@]}"; do
                 if [[ "$creator_id" == "$allowed_id" ]]; then
                   SAFE_CONTEXT=$(echo "$context" | sed 's/|//g')
-                  FAILURES_STATUSES+=$'- *['$SAFE_CONTEXT'|'${target_url:-"#"}']*: '"$description"$'\n'
+                  FAILURES_STATUSES+=$'- ['$SAFE_CONTEXT'|'${target_url:-"#"}'] - '" {{ $description }}"$'\n'
                   break  # No need to check further IDs once matched
                 fi
               done
@@ -82,10 +82,7 @@ jobs:
             echo "Detected external failures:"
             echo "$FAILURES_STATUSES"
 
-            HEADER="----
-            🚨 *Detected External Failures:*"
-
-            MARKDOWN="$HEADER"$'\n'"$FAILURES_STATUSES"
+            MARKDOWN="{panel:bgColor=#ffebe6|title=Failing checks}"$'\n'"$FAILURES_STATUSES"$'\n'"{panel}"
 
             echo "markdown_fragment<<EOF" >> $GITHUB_OUTPUT
             echo "$MARKDOWN" >> $GITHUB_OUTPUT
