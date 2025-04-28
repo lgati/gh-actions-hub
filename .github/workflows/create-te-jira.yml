@@ -2,6 +2,13 @@ name: Create Jira Ticket
 
 on:
   workflow_call:
+    inputs:
+      jira_base_url:
+        required: true
+        type: string
+      jira_user_email:
+        required: true
+        type: string    
     outputs:
       repo_name:
         description: "Uppercase name of the repository"
@@ -12,6 +19,9 @@ on:
       jira_ticket_url:
         description: "URL of the created Jira ticket"
         value: ${{ jobs.create-jira-ticket.outputs.jira_ticket_url }}
+    secrets:
+      GH_TOKEN:
+        required: true
 
 permissions:
   contents: read
@@ -32,7 +42,7 @@ jobs:
           API_URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}"
           
           HTTP_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -H "Authorization: Bearer ${{ vars.GHA_PAT }}" \
+            -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$API_URL")
 
@@ -124,32 +134,32 @@ jobs:
 
       - name: Assign Jira Ticket
         run: |
-          accountId=$(curl -s -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
-            -G --data-urlencode "query=$JIRA_USER_EMAIL" \
-            "$JIRA_BASE_URL/rest/api/3/user/search" | jq -r '.[0].accountId')
+          accountId=$(curl -s -u "${{ inputs.jira_user_email }}:$JIRA_API_TOKEN" \
+            -G --data-urlencode "query=${{ inputs.jira_user_email }}" \
+            "${{ inputs.jira_base_url }}/rest/api/3/user/search" | jq -r '.[0].accountId')
 
           if [ -z "$accountId" ] || [ "$accountId" = "null" ]; then
-            echo "⚠️ No Jira account ID found for $JIRA_USER_EMAIL. Skipping assignment."
+            echo "⚠️ No Jira account ID found for ${{ inputs.jira_user_email }}. Skipping assignment."
             exit 0
           fi
 
           echo "Assigning ticket to accountId: $accountId"
 
-          curl -X PUT -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+          curl -X PUT -u "${{ inputs.jira_user_email }}:$JIRA_API_TOKEN" \
             -H "Content-Type: application/json" \
             --data "$(jq -n --arg accountId "$accountId" '{accountId: $accountId}')" \
-            "$JIRA_BASE_URL/rest/api/3/issue/${{ steps.create.outputs.issue }}/assignee"
+            "${{ inputs.jira_base_url }}/rest/api/3/issue/${{ steps.create.outputs.issue }}/assignee"
 
       - name: Transition Jira Issue to "Open"
         run: |
-          curl -X POST -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+          curl -X POST -u "${{ inputs.jira_user_email }}:$JIRA_API_TOKEN" \
             -H "Content-Type: application/json" \
             --data '{"transition":{"id":"21"}}' \
-            "$JIRA_BASE_URL/rest/api/3/issue/${{ steps.create.outputs.issue }}/transitions"
+            "${{ inputs.jira_base_url }}/rest/api/3/issue/${{ steps.create.outputs.issue }}/transitions"
 
       - name: Set Output Data
         id: set-url
         run: |
           echo "repo_name=$(echo '${{ github.repository }}' | cut -d'/' -f2 | tr 'a-z' 'A-Z')" >> $GITHUB_OUTPUT
           echo "id=${{ steps.create.outputs.issue }}" >> $GITHUB_OUTPUT
-          echo "url=$JIRA_BASE_URL/browse/${{ steps.create.outputs.issue }}"
+          echo "url=${{ inputs.jira_base_url }}/browse/${{ steps.create.outputs.issue }}"
