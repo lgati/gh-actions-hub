@@ -27,33 +27,39 @@ jobs:
         id: fetch-statuses
         run: |
           echo "Fetching commit statuses for: ${{ inputs.pr_head_sha }} in repo: ${{ inputs.repo_name }}..."
-
+      
           STATUS_URL="https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/statuses"
           STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$STATUS_URL")
-
+      
           echo "Raw STATUS_RESPONSE:"
           echo "$STATUS_RESPONSE"
-
+      
+          # Validate if response is valid JSON
+          if ! echo "$STATUS_RESPONSE" | jq empty; then
+            echo "❌ ERROR: Failed to parse STATUS_RESPONSE. Invalid JSON returned."
+            exit 1
+          fi
+      
           FAILURES_STATUSES=""
-
+      
           for row in $(echo "$STATUS_RESPONSE" | jq -c '.[]'); do
             state=$(echo "$row" | jq -r '.state')
             context=$(echo "$row" | jq -r '.context')
             target_url=$(echo "$row" | jq -r '.target_url')
             description=$(echo "$row" | jq -r '.description')
-
+      
             if [[ "$state" == "failure" ]] && ([[ "$context" == *"Currents"* ]] || [[ "$context" == *"argos"* ]] || [[ "$context" == *"Argos"* ]]); then
               SAFE_CONTEXT=$(echo "$context" | sed 's/|//g')
               FAILURES_STATUSES+=$'- *['$SAFE_CONTEXT']('${target_url:-"#"}')*: '"$description"$'\n'
             fi
           done
-
+      
           echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
           echo "$FAILURES_STATUSES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
+    
       - name: Build Markdown Output
         id: build-markdown
         run: |
