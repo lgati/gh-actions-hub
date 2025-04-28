@@ -22,6 +22,9 @@ on:
         required: false
         default: "true"
         type: string
+    secrets:
+      GH_TOKEN:
+        required: true
     # secrets:
     #   JIRA_API_TOKEN:
     #     required: true
