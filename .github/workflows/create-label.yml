@@ -1,0 +1,59 @@
+name: Create Label
+
+on:
+  workflow_call:
+    inputs:
+      label_name:
+        required: true
+        type: string
+      label_color:
+        required: true
+        type: string
+      label_description:
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  create-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or update label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { label_name, label_color, label_description } = {
+              label_name: "${{ inputs.label_name }}",
+              label_color: "${{ inputs.label_color }}",
+              label_description: "${{ inputs.label_description }}"
+            };
+
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: label_name
+              });
+
+              await github.rest.issues.updateLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: label_name,
+                color: label_color,
+                description: label_description
+              });
+              console.log(`Updated existing label '${label_name}'`);
+            } catch (error) {
+              if (error.status === 404) {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label_name,
+                  color: label_color,
+                  description: label_description
+                });
+                console.log(`Created new label '${label_name}'`);
+              } else {
+                throw error;
+              }
+            }

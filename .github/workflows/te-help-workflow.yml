@@ -1,0 +1,137 @@
+name: TE Help Workflow
+
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        required: true
+        type: number
+      comment_id:
+        required: true
+        type: string
+      comment_author:
+        required: true
+        type: string
+      jira_base_url:
+        required: true
+        type: string
+      jira_user_email:
+        required: true
+        type: string        
+      mock_mode:
+        required: false
+        default: "true"
+        type: string
+    secrets:
+      JIRA_API_TOKEN:
+        required: true
+      DD_API_KEY:
+        required: true
+      DD_APP_KEY:
+        required: true
+
+jobs:
+  update-comment-before:
+    runs-on: ubuntu-latest
+    steps:      
+      - name: Update comment with feedback message and 👀 reaction 
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commentId = "${{ inputs.comment_id }}";
+            const message = `We're actively notifying **TE** and creating a JIRA ticket for your request and will update here once completed.`;
+
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId,
+              content: "eyes"
+            })
+
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId,
+              body: message
+            });
+
+  # get-oncall:
+  #   needs: update-comment-before
+  #   uses: ./.github/workflows/get-te-oncall.yml
+  #   with:
+  #     mock_mode: ${{ inputs.mock_mode }}
+  #   secrets:
+  #     DD_API_KEY: ${{ secrets.DD_API_KEY }} 
+  #     DD_APP_KEY: ${{ secrets.DD_APP_KEY }}  
+
+  create-jira-ticket:
+    uses: ./.github/workflows/create-te-jira.yml
+    # secrets:
+    #   JIRA_BASE_URL: https://businessinsider.atlassian.net
+    #   JIRA_USER_EMAIL: lgati@insider.com
+    #   JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      
+  update-comment-after:
+    needs: create-jira-ticket
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update comment after jira is created with message and 🚀 reaction
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commentId = "${{ inputs.comment_id }}"; // No need to parse
+            const author = "${{ inputs.comment_author }}";
+            
+            const jirId = "${{ needs.create-jira-ticket.outputs.jira_ticket_id }}";
+            const escapedJirId = jirId.replace('-', '--');
+            const jiraUrl = "${{ needs.create-jira-ticket.outputs.jira_ticket_url }}";
+            
+            const currentReactionType = "eyes"; 
+            const newReactionType = "rocket"; // Add rocket reaction
+
+            const message = `Hey @${author}! TE help has been escalated! Follow up on ticket [![](https://img.shields.io/badge/${escapedJirId}-white?style=plastic&logo=jirasoftware&logoColor=%230052CC)](${jiraUrl})`;
+
+            // Fetch all reactions for the comment
+            const reactions = await github.rest.reactions.listForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId
+            });
+
+            // Remove the "eyes" reaction (if it exists)
+            const reactionToRemove = reactions.data.find(reaction => reaction.content === currentReactionType);
+            if (reactionToRemove) {
+              await github.rest.reactions.deleteForIssueComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: commentId,
+                reaction_id: reactionToRemove.id
+              });
+            }
+
+            // Add the "rocket" reaction
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId,
+              content: newReactionType
+            });
+
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId,
+              body: message
+            });
+
+  add-label-to-pr:
+    needs: create-jira-ticket
+    if: github.event_name == 'issue_comment'
+    uses: ./.github/workflows/add-label-to-pr.yml
+    with:
+      pr_number: ${{ inputs.pr_number }}
+      label_name: 'te-help-requested'
+      label_color: 'F44336'
+      label_description: 'Escalated to Test Engineering'

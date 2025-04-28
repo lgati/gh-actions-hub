@@ -1,0 +1,40 @@
+name: Add Label to PR
+
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        required: true
+        type: number
+      label_name:
+        required: true
+        type: string
+      label_color:
+        required: true
+        type: string
+      label_description:
+        required: true
+        type: string
+
+jobs:
+  ensure-label-exists:
+    uses: ./.github/workflows/create-label.yml
+    with:
+      label_name: ${{ inputs.label_name }}
+      label_color: ${{ inputs.label_color }}
+      label_description: ${{ inputs.label_description }}
+
+  add-label:
+    needs: ensure-label-exists
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add label to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ inputs.pr_number }},
+              labels: ["${{ inputs.label_name }}"]
+            });

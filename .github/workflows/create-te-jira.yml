@@ -1,18 +1,17 @@
 name: Create Jira Ticket
 
 on:
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: "Pull Request Number"
-        default: "1"
-        required: true
-        type: string
+  workflow_call:
+    outputs:
       repo_name:
-        description: "Repository name (format: owner/repo)"
-        required: false
-        default: "lgati/gh-mock-checks-app"
-        type: string
+        description: "Uppercase name of the repository"
+        value: ${{ jobs.create-jira-ticket.outputs.repo_name }}
+      jira_ticket_id:
+        description: "Jira ID of the created Jira ticket"
+        value: ${{ jobs.create-jira-ticket.outputs.jira_ticket_id }}
+      jira_ticket_url:
+        description: "URL of the created Jira ticket"
+        value: ${{ jobs.create-jira-ticket.outputs.jira_ticket_url }}
 
 permissions:
   contents: read
@@ -28,9 +27,9 @@ jobs:
       - name: Fetch PR Title and Head SHA
         id: fetch
         run: |
-          echo "Fetching PR details from repo: ${{ inputs.repo_name }} and PR #${{ inputs.pr_number }}..."
+          echo "Fetching PR details from repo: ${{ github.repository }} and PR #${{ github.event.issue.number }}..."
 
-          API_URL="https://api.github.com/repos/${{ inputs.repo_name }}/pulls/${{ inputs.pr_number }}"
+          API_URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}"
           
           HTTP_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
             -H "Authorization: Bearer ${{ vars.GHA_PAT }}" \
@@ -60,7 +59,7 @@ jobs:
     uses: ./.github/workflows/fetch-failures.yml
     with:
       pr_head_sha: ${{ needs.fetch-pr-info.outputs.pr_head_sha }}
-      repo_name: ${{ inputs.repo_name }}
+      repo_name: ${{ github.repository }}
 
   create-jira-ticket:
     needs: [fetch-pr-info, fetch-failures]
@@ -69,6 +68,10 @@ jobs:
       JIRA_BASE_URL: ${{ vars.JIRA_SITE_URL }}
       JIRA_USER_EMAIL: ${{ vars.JIRA_API_EMAIL }}
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+    outputs:
+      repo_name: ${{ steps.set-url.outputs.repo_name }}
+      jira_ticket_id: ${{ steps.set-url.outputs.id }}
+      jira_ticket_url: ${{ steps.set-url.outputs.url }}
     steps:
       - name: Authenticate with Jira 
         uses: atlassian/gajira-login@v3
@@ -100,58 +103,24 @@ jobs:
           echo "$final_description" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      # - name: Create Jira issue (real)
-      #   id: create
-      #   uses: atlassian/gajira-create@v3
-      #   with:
-      #     project: GH
-      #     issuetype: Task
-      #     summary: >
-      #       [${{ env.REPO_NAME }}] Issue detected on PR #${{ inputs.pr_number }}: ${{ needs.fetch-pr-info.outputs.pr_title }}
-      #     description: ${{ env.FINAL_DESCRIPTION }}
-
-
-      - name: Create Jira issue (with curl, testing panel rendering)
+      - name: Create Jira issue (real)
         id: create
-        run: |
-          echo "Creating Jira Issue using curl with panel formatting..."
+        uses: atlassian/gajira-create@v3
+        with:
+          project: GH
+          issuetype: Task
+          summary: >
+            [${{ env.REPO_NAME }}] Issue detected on PR #${{ github.event.issue.number }}: ${{ needs.fetch-pr-info.outputs.pr_title }}
+          description: |
+            A request for Test Engineering support was submitted via a GitHub Pull Request.
 
-          JIRA_API_URL="$JIRA_BASE_URL/rest/api/3/issue"
+            **Repository:** `${{ env.REPO_NAME }}`  
+            **Pull Request:** [#${{ github.event.issue.number }} - ${{ github.event.issue.title }}](${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }})  
+            **Requested by:** [@${{ github.event.comment.user.login }}](https://github.com/${{ github.event.comment.user.login }})
 
-          DESCRIPTION_CONTENT="{panel:title=Detected Failures|borderStyle=dashed|borderColor=#ccc|titleBGColor=#F7D6C1|bgColor=#FFFFCE}
-          *This is a test panel*
-          - Detected some failures
-          {panel}"
+            ${{ env.FINAL_DESCRIPTION }}
 
-              # Prepare payload
-              PAYLOAD=$(jq -n \
-                --arg project "GH" \
-                --arg summary "[${{ env.REPO_NAME }}] Issue detected on PR #${{ inputs.pr_number }}: ${{ needs.fetch-pr-info.outputs.pr_title }}" \
-                --arg description "$DESCRIPTION_CONTENT" \
-                '{fields: {project: {key: $project}, summary: $summary, description: $description, issuetype: {name: "Task"}}}'
-              )
-
-              # Call Jira
-              RESPONSE=$(curl -s -X POST \
-                -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
-                -H "Content-Type: application/json" \
-                --data "$PAYLOAD" \
-                "$JIRA_API_URL")
-
-              echo "Raw Jira Response:"
-              echo "$RESPONSE"
-
-              ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.key')
-
-              if [ "$ISSUE_KEY" == "null" ] || [ -z "$ISSUE_KEY" ]; then
-                echo "❌ Failed to create Jira issue."
-                exit 1
-              fi
-
-              echo "Created Jira issue: $ISSUE_KEY"
-
-              echo "issue=$ISSUE_KEY" >> $GITHUB_OUTPUT
-
+            Please review the PR and keep the ticket up-to-date with the progress status.
 
       - name: Assign Jira Ticket
         run: |
