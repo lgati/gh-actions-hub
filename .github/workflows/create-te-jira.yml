@@ -22,6 +22,8 @@ on:
     secrets:
       GH_TOKEN:
         required: true
+      JIRA_API_TOKEN:
+        required: true
 
 permissions:
   contents: read
