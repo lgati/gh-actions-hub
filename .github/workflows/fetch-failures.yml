@@ -13,6 +13,9 @@ on:
       markdown_fragment:
         description: "Markdown fragment listing external check failures"
         value: ${{ jobs.detect.outputs.markdown_fragment }}
+    secrets:
+      GH_TOKEN:
+        required: true
 
 jobs:
   detect:
@@ -26,7 +29,7 @@ jobs:
           echo "Fetching commit statuses for: ${{ inputs.pr_head_sha }} in repo: ${{ inputs.repo_name }}..."
 
           STATUS_URL="https://api.github.com/repos/${{ inputs.repo_name }}/commits/${{ inputs.pr_head_sha }}/statuses"
-          STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ vars.GHA_PAT }}" \
+          STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$STATUS_URL")
 

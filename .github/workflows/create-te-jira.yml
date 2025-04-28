@@ -70,6 +70,8 @@ jobs:
     with:
       pr_head_sha: ${{ needs.fetch-pr-info.outputs.pr_head_sha }}
       repo_name: ${{ github.repository }}
+    secrets: inherit
+
 
   create-jira-ticket:
     needs: [fetch-pr-info, fetch-failures]
