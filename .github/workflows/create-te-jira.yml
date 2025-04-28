@@ -118,9 +118,21 @@ jobs:
 
             ${{ needs.fetch-failures.outputs.markdown_fragment }}
 
-            {warning:title=Attention!}
+            {warning}
             Please review the PR and keep the ticket up-to-date with the progress status.
             {warning}
+
+            {panel:title=Attention!|borderStyle=solid|borderColor=#ccc|backgroundColor=#fefae6}
+            Please review the PR and keep the ticket up-to-date with the progress status.
+            {panel}
+
+            {panel:bgColor=#fefae6|title=Attention!}
+            Please review the PR and keep the ticket up-to-date with the progress status.
+            {panel}
+
+            {panel:bgColor=#fefae6}
+            Please review the PR and keep the ticket up-to-date with the progress status.
+            {panel}
 
       - name: Assign Jira Ticket
         run: |
