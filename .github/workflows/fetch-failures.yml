@@ -71,7 +71,13 @@ jobs:
 
           ALLOWED_CREATORS=("98385548" "62215774")
 
-          while read -r state context target_url description creator_id; do
+          while read -r row; do
+            state=$(echo "$row" | jq -r '.state // empty')
+            context=$(echo "$row" | jq -r '.context // empty')
+            target_url=$(echo "$row" | jq -r '.target_url // "#"')
+            description=$(echo "$row" | jq -r '.description // empty')
+            creator_id=$(echo "$row" | jq -r '.creator.id // empty')
+
             if [[ "$state" == "failure" ]]; then
               for allowed_id in "${ALLOWED_CREATORS[@]}"; do
                 if [[ "$creator_id" == "$allowed_id" ]]; then
@@ -81,13 +87,8 @@ jobs:
                 fi
               done
             fi
-          done < <(echo "$STATUS_RESPONSE" | jq -r '.[] | [
-            (.state // ""),
-            (.context // ""),
-            (.target_url // "#"),
-            (.description // ""),
-            (.creator.id // "")
-          ] | @tsv')
+          done < <(echo "$STATUS_RESPONSE" | jq -c '.[]')
+
 
           echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
           echo "$FAILURES_STATUSES" >> $GITHUB_ENV
