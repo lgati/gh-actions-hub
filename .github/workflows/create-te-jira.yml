@@ -73,6 +73,15 @@ jobs:
             *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]  
             {panel}
 
+            {panel:title=${{ env.REPO_NAME }}}
+            *URL:* [#${{ github.event.issue.number }} - ${{ github.event.issue.title }}|${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}]  
+            *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]  
+            {panel}
+
+            {panel:title=[${{ env.REPO_NAME }} PR#${{ github.event.issue.number }} - ${{ github.event.issue.title }}|${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}]}
+            *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]  
+            {panel}
+
             ${{ needs.fetch-additional-info.outputs.additional_info }}
 
             ${{ needs.fetch-failures.outputs.markdown_fragment }}
