@@ -34,6 +34,10 @@ jobs:
     uses: ./.github/workflows/fetch-failures.yml
     secrets: inherit
 
+  fetch-additional-info:
+    uses: ./.github/workflows/fetch-additional-info.yml
+    secrets: inherit
+   
   create-jira-ticket:
     needs: fetch-failures
     runs-on: ubuntu-latest
@@ -69,10 +73,12 @@ jobs:
             *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]  
             {panel}
 
+            ${{ needs.fetch-additional-info.outputs.additional_info }}
+
             ${{ needs.fetch-failures.outputs.markdown_fragment }}
 
             {panel:bgColor=#fefae6}
-            Please review the PR and keep the ticket up-to-date with the progress status.
+            Please review the failing checks and keep the ticket up-to-date with the progress status.
             {panel}
 
       - name: Assign Jira Ticket
