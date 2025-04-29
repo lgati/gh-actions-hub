@@ -76,7 +76,7 @@ jobs:
         uses: atlassian/gajira-create@v3
         with:
           project: GH
-          issuetype: ${{ inputs.mock_mode == 'true' && 'Task' || 'Incident' }}
+          issuetype: Task
           summary: >
             [${{ env.REPO_NAME }}] Issue detected on PR #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
           description: |
