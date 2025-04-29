@@ -52,6 +52,7 @@ jobs:
       jira_user_email: ${{ inputs.jira_user_email }}
       high_priority: ${{ needs.fetch-workflow-config.outputs.high_priority }}
       additional_info: ${{ needs.fetch-workflow-config.outputs.additional_info }}
+      force_jira: ${{ needs.fetch-workflow-config.outputs.force_jira }}
       mock_mode: ${{ needs.fetch-workflow-config.outputs.mock_mode }}
     secrets: inherit
 

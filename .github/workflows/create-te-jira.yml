@@ -15,6 +15,9 @@ on:
       high_priority:
         required: false
         type: string
+      force_jira:
+        required: false
+        type: string
       additional_info:
         required: false
         type: string
@@ -41,6 +44,7 @@ jobs:
     secrets: inherit
 
   create-jira-ticket:
+    if: ${{ inputs.mock_mode != 'true' || inputs.force_jira == 'true' }}
     needs: fetch-failures
     runs-on: ubuntu-latest
     env:
@@ -48,8 +52,8 @@ jobs:
       JIRA_USER_EMAIL: ${{ inputs.jira_user_email }}
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
     outputs:
-      jira_ticket_id: ${{ steps.create.outputs.issue }}
-      jira_ticket_url: ${{ inputs.jira_base_url }}/browse/${{ steps.create.outputs.issue }}
+      jira_ticket_id: ${{ steps.create.outputs.issue || 'TE-1234'}}
+      jira_ticket_url: ${{ inputs.jira_base_url }}/browse/${{ steps.create.outputs.issue || 'TE-1234' }}
     steps:
       - name: Authenticate with Jira 
         uses: atlassian/gajira-login@v3
@@ -57,11 +61,9 @@ jobs:
       - name: Format Jira Fields
         id: set_fields
         run: |
-          # Set repository name
           REPO_NAME=$(echo '${{ github.repository }}' | cut -d'/' -f2 | tr 'a-z' 'A-Z')
           echo "repo_name=$REPO_NAME"  >> $GITHUB_OUTPUT
 
-          # Build full fields JSON if high priority
           if [ "${{ inputs.high_priority }}" == "true" ]; then
             PRIORITY_JSON='"priority":{"name":"High"}'
             DUEDATE_JSON=$(date +'"duedate":"%Y-%m-%d"')
@@ -74,6 +76,7 @@ jobs:
 
       - name: Create Jira issue
         id: create
+        if: ${{ inputs.mock_mode != 'true' || inputs.force_jira == 'true' }}
         uses: atlassian/gajira-create@v3
         with:
           project: GH
@@ -96,6 +99,7 @@ jobs:
           fields: ${{ steps.set_fields.outputs.jira_fields }}
 
       - name: Assign Jira Ticket
+        if: steps.create.conclusion == 'success'
         run: |
           accountId=$(curl -s -u "${{ inputs.jira_user_email }}:$JIRA_API_TOKEN" \
             -G --data-urlencode "query=${{ inputs.jira_user_email }}" \
@@ -114,6 +118,7 @@ jobs:
             "${{ inputs.jira_base_url }}/rest/api/3/issue/${{ steps.create.outputs.issue }}/assignee"
 
       - name: Transition Jira Issue to "Open"
+        if: steps.create.conclusion == 'success'
         run: |
           curl -X POST -u "${{ inputs.jira_user_email }}:$JIRA_API_TOKEN" \
             -H "Content-Type: application/json" \
