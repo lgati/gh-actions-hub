@@ -53,7 +53,7 @@ jobs:
         run: |
           if [[ "${{ inputs.high_priority }}" == "true" ]]; then
             echo "color=#e01e5a" >> $GITHUB_OUTPUT
-            echo "title=:red_circle: TE help needed TODAY!!" >> $GITHUB_OUTPUT
+            echo "title=:red_circle: TE help needed *today*!!" >> $GITHUB_OUTPUT
             echo "urgency=🔥 This request has been marked *high priority*." >> $GITHUB_OUTPUT
           else
             echo "color=#eed202" >> $GITHUB_OUTPUT
@@ -65,10 +65,10 @@ jobs:
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_CHANNEL: ${{ steps.channel.outputs.channel }}
-          SLACK_USERNAME: TE Help Bot
           SLACK_ICON_EMOJI: ':robot_face:'
           SLACK_COLOR: ${{ steps.slack-meta.outputs.color }}
           SLACK_TITLE: ${{ steps.slack-meta.outputs.title }}
+          MSG_MINIMAL: true
           SLACK_MESSAGE: |  
             
             *Code base*: ${{ inputs.repo_name }}
@@ -78,6 +78,7 @@ jobs:
             *Jira ticket*: <${{ inputs.jira_ticket_url }}|${{ inputs.jira_ticket_id }}>
 
             ${{ steps.slack-meta.outputs.urgency }}
+          SLACK_USERNAME: TE Help Bot
           SLACK_LINK_NAMES: true
           SLACK_WEBHOOK: https://hooks.slack.com/services/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
-          MSG_MINIMAL: true
+          
