@@ -96,11 +96,8 @@ jobs:
             {panel:bgColor=#fefae6}
             Please review the failing checks and keep the ticket up-to-date with the progress status.
             {panel}
-          fields: >
-            {
-              ${{ steps.set_fields.outputs.priority_field && format('"priority":{0},', steps.set_fields.outputs.priority_field) || '' }}
-              ${{ steps.set_fields.outputs.duedate_field && format('"duedate":"{0}"', steps.set_fields.outputs.duedate_field) || '' }}
-            }
+          fields: > 
+            {"priority": "High"}
 
       - name: Assign Jira Ticket
         run: |
