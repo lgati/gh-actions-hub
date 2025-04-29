@@ -61,23 +61,74 @@ jobs:
             echo "urgency=" >> $GITHUB_OUTPUT
           fi
 
+    #   - name: Slack Notification
+    #     uses: rtCamp/action-slack-notify@v2
+    #     env:
+    #       SLACK_CHANNEL: ${{ steps.channel.outputs.channel }}
+    #       SLACK_COLOR: ${{ steps.slack-meta.outputs.color }}
+    #       SLACK_ICON_EMOJI: ':robot_face:'
+    #       SLACK_TITLE: ${{ steps.slack-meta.outputs.title }}
+    #       SLACK_MESSAGE: |  
+    #         \n*Code base*: ${{ inputs.repo_name }}
+    #         *Pull Request*: <${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}|#${{ github.event.issue.number || 'XX' }}> - ${{ github.event.issue.title || 'pr title' }}
+
+    #         *Notifying to*: @${{ steps.slack-handle.outputs.assignee_handle }}
+    #         *Jira ticket*: <${{ inputs.jira_ticket_url }}|${{ inputs.jira_ticket_id }}>
+
+    #         ${{ steps.slack-meta.outputs.urgency }}
+    #       SLACK_USERNAME: TE Help Bot
+    #       SLACK_LINK_NAMES: true
+    #       SLACK_WEBHOOK: https://hooks.slack.com/services/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
+    #       MSG_MINIMAL: true
+    #       ENABLE_ESCAPES: true
+
       - name: Slack Notification
         uses: rtCamp/action-slack-notify@v2
         env:
-          SLACK_CHANNEL: ${{ steps.channel.outputs.channel }}
-          SLACK_COLOR: ${{ steps.slack-meta.outputs.color }}
-          SLACK_ICON_EMOJI: ':robot_face:'
-          SLACK_TITLE: ${{ steps.slack-meta.outputs.title }}
-          SLACK_MESSAGE: |  
-            \n*Code base*: ${{ inputs.repo_name }}
-            *Pull Request*: <${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}|#${{ github.event.issue.number || 'XX' }}> - ${{ github.event.issue.title || 'pr title' }}
-
-            *Notifying to*: @${{ steps.slack-handle.outputs.assignee_handle }}
-            *Jira ticket*: <${{ inputs.jira_ticket_url }}|${{ inputs.jira_ticket_id }}>
-
-            ${{ steps.slack-meta.outputs.urgency }}
-          SLACK_USERNAME: TE Help Bot
-          SLACK_LINK_NAMES: true
           SLACK_WEBHOOK: https://hooks.slack.com/services/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
-          MSG_MINIMAL: true
-          ENABLE_ESCAPES: true
+          #SLACK_CHANNEL: ${{ steps.channel.outputs.channel }}
+          SLACK_USERNAME: TE Help Bot
+          SLACK_ICON_EMOJI: ${{ steps.slack-meta.outputs.emoji }}
+          SLACK_LINK_NAMES: true
+          SLACK_COLOR: ${{ steps.slack-meta.outputs.color }}
+          SLACK_PAYLOAD: |
+            {
+              "attachments": [
+                {
+                  "color": "${{ steps.slack-meta.outputs.color }}",
+                  "blocks": [
+                    {
+                      "type": "header",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "${{ steps.slack-meta.outputs.title }}",
+                        "emoji": true
+                      }
+                    },
+                    {
+                      "type": "section",
+                      "fields": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Code base:*\n${{ inputs.repo_name }}"
+                        },
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Pull Request:*\n<${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}|#${{ github.event.issue.number || 'XX' }}> - ${{ github.event.issue.title || 'PR title' }}"
+                        },
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Notifying to:*\n@${{ steps.slack-handle.outputs.assignee_handle }}"
+                        },
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Jira Ticket:*\n<${{ inputs.jira_ticket_url }}|${{ inputs.jira_ticket_id }}>"
+                        }
+                      ]
+                    }
+                    ${{ steps.slack-meta.outputs.urgency != '' && format(',{"type":"section","text":{"type":"mrkdwn","text":"{0}"}}', steps.slack-meta.outputs.urgency) || '' }}
+                  ]
+                }
+              ]
+            }
+          CUSTOM_PAYLOAD: true
