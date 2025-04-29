@@ -97,7 +97,7 @@ jobs:
             Please review the failing checks and keep the ticket up-to-date with the progress status.
             {panel}
           fields: > 
-            { "priority": { name: "High" },"duedate": "2025-04-29"}
+            { "priority": { "name": "High" },"duedate": "2025-04-29"}
 
       - name: Assign Jira Ticket
         run: |
