@@ -1,0 +1,62 @@
+name: Fetch Workflow Config
+
+on:
+  workflow_call:
+    outputs:
+      mock_mode:
+        description: "Whether mock mode is enabled (string true/false)"
+        value: ${{ jobs.extract.outputs.mock_mode }}
+      high_priority:
+        description: "Whether high priority mode is enabled"
+        value: ${{ jobs.extract.outputs.high_priority }}
+      additional_info:
+        description: "Cleaned comment content, formatted for Jira"
+        value: ${{ jobs.extract.outputs.additional_info }}
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    outputs:
+      mock_mode: ${{ steps.extract.outputs.mock_mode }}
+      high_priority: ${{ steps.extract.outputs.high_priority }}
+      additional_info: ${{ steps.extract.outputs.additional_info }}
+
+    steps:
+      - name: Parse Comment and Extract Flags
+        id: extract
+        run: |
+          echo "Parsing comment..."
+
+          COMMENT_BODY="${{ github.event.comment.body }}"
+
+          # Initialize config flags
+          MOCK_MODE="false"
+          HIGH_PRIORITY="false"
+
+          # Detect commands
+          if echo "$COMMENT_BODY" | grep -qE '^/te-help mock\b'; then
+            MOCK_MODE="true"
+          fi
+
+          if echo "$COMMENT_BODY" | grep -qE '^/te-help today\b'; then
+            HIGH_PRIORITY="true"
+          fi
+
+          # Remove known commands from the beginning of the comment
+          CLEANED_COMMENT=$(echo "$COMMENT_BODY" | \
+            sed -E 's|^/te-help( mock| today)?[[:space:]]*||i')
+
+          # Format additional info (if anything left)
+          if [ -n "$CLEANED_COMMENT" ]; then
+            FORMATTED_INFO="{panel:bgColor=#eae6ff|title=User notes}"$'\n'"$CLEANED_COMMENT"$'\n'"{panel}"
+          else
+            FORMATTED_INFO=""
+          fi
+
+          # Set outputs
+          echo "mock_mode=$MOCK_MODE" >> $GITHUB_OUTPUT
+          echo "high_priority=$HIGH_PRIORITY" >> $GITHUB_OUTPUT
+
+          echo "additional_info<<EOF" >> $GITHUB_OUTPUT
+          echo "$FORMATTED_INFO" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT

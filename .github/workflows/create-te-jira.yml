@@ -9,6 +9,15 @@ on:
       jira_user_email:
         required: true
         type: string
+      mock_mode:
+        required: false
+        type: string
+      high_priority:
+        required: false
+        type: boolean
+      additional_info:
+        required: false
+        type: string
     outputs:
       repo_name:
         description: "Uppercase name of the repository"
@@ -34,51 +43,63 @@ jobs:
     uses: ./.github/workflows/fetch-failures.yml
     secrets: inherit
 
-  fetch-additional-info:
-    uses: ./.github/workflows/fetch-additional-info.yml
-    secrets: inherit
-   
   create-jira-ticket:
-    needs: [fetch-failures, fetch-additional-info]
+    needs: fetch-failures
     runs-on: ubuntu-latest
     env:
       JIRA_BASE_URL: ${{ inputs.jira_base_url }}
       JIRA_USER_EMAIL: ${{ inputs.jira_user_email }}
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
     outputs:
-      repo_name: ${{ steps.set-url.outputs.repo_name }}
+      repo_name: ${{ steps.set_fields.outputs.repo_name }}
       jira_ticket_id: ${{ steps.set-url.outputs.jira_ticket_id }}
       jira_ticket_url: ${{ steps.set-url.outputs.jira_ticket_url }}
     steps:
       - name: Authenticate with Jira 
         uses: atlassian/gajira-login@v3
 
-      - name: Set repository name in uppercase
-        id: set_repo_name
+      - name: Format Jira Fields
+        id: set_fields
         run: |
-          echo "REPO_NAME=$(echo '${{ github.repository }}' | cut -d'/' -f2 | tr 'a-z' 'A-Z')" >> $GITHUB_ENV
+          # Set uppercase repo name
+          REPO_NAME=$(echo '${{ github.repository }}' | cut -d'/' -f2 | tr 'a-z' 'A-Z')
+          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+
+          # Set high priority field if requested
+          if [ "${{ inputs.high_priority }}" == "true" ]; then
+            echo 'priority_field={"name":"High"}' >> $GITHUB_OUTPUT
+            echo "duedate_field=$(date +%F)" >> $GITHUB_OUTPUT
+          else
+            echo 'priority_field=' >> $GITHUB_OUTPUT
+            echo 'duedate_field=' >> $GITHUB_OUTPUT
+          fi
 
       - name: Create Jira issue
         id: create
         uses: atlassian/gajira-create@v3
         with:
           project: GH
-          issuetype: Task
+          issuetype: ${{ inputs.mock_mode == 'true' && 'Task' || 'Incident' }}
           summary: >
             [${{ env.REPO_NAME }}] Issue detected on PR #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
           description: |
             {panel}
-            *Pull Request:* ${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}]
+            *Pull Request:* ${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}
             *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]
             {panel}
 
-            ${{ needs.fetch-additional-info.outputs.additional_info }}
+            ${{ inputs.additional_info }}
 
             ${{ needs.fetch-failures.outputs.markdown_fragment }}
 
             {panel:bgColor=#fefae6}
             Please review the failing checks and keep the ticket up-to-date with the progress status.
             {panel}
+          fields: >
+            {
+              ${{ steps.set_fields.outputs.priority_field && format('"priority":{0},', steps.set_fields.outputs.priority_field) || '' }}
+              ${{ steps.set_fields.outputs.duedate_field && format('"duedate":"{0}"', steps.set_fields.outputs.duedate_field) || '' }}
+            }
 
       - name: Assign Jira Ticket
         run: |
@@ -97,7 +118,7 @@ jobs:
             -H "Content-Type: application/json" \
             --data "$(jq -n --arg accountId "$accountId" '{accountId: $accountId}')" \
             "${{ inputs.jira_base_url }}/rest/api/3/issue/${{ steps.create.outputs.issue }}/assignee"
-            
+
       - name: Transition Jira Issue to "Open"
         run: |
           curl -X POST -u "${{ inputs.jira_user_email }}:$JIRA_API_TOKEN" \

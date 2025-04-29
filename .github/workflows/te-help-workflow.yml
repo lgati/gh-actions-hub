@@ -62,16 +62,21 @@ jobs:
   #     mock_mode: ${{ inputs.mock_mode }}
   #   secrets:
   #     DD_API_KEY: ${{ secrets.DD_API_KEY }} 
-  #     DD_APP_KEY: ${{ secrets.DD_APP_KEY }}  
+  #     DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
+  
+  fetch-workflow-config:
+    uses: ./.github/workflows/fetch-workflow-config.yml
 
   create-jira-ticket:
     uses: ./.github/workflows/create-te-jira.yml
     with:
       jira_base_url: ${{ inputs.jira_base_url }}
       jira_user_email: ${{ inputs.jira_user_email }}
+      high_priority: ${{ needs.fetch-workflow-config.outputs.high_priority }}
+      additional_info: ${{ needs.fetch-workflow-config.outputs.additional_info }}
+      mock_mode: ${{ needs.fetch-workflow-config.outputs.mock_mode }}
     secrets: inherit
 
-      
   update-comment-after:
     needs: create-jira-ticket
     runs-on: ubuntu-latest
