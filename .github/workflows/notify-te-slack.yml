@@ -37,6 +37,7 @@ jobs:
           REPO_NAME=$(echo '${{ github.repository }}' | cut -d'/' -f2)
           echo "repo_name=$REPO_NAME"  >> $GITHUB_OUTPUT
 
+          # set slack data based on priority
           if [[ "${{ inputs.high_priority }}" == "true" ]]; then
             echo "color=#e01e5a" >> $GITHUB_OUTPUT
             echo "title=:red_circle: TE help needed *today*!!" >> $GITHUB_OUTPUT
@@ -47,7 +48,9 @@ jobs:
             echo "title=:large_yellow_circle: TE help was requested!" >> $GITHUB_OUTPUT
             echo "notifying_to=@te-goalie" >> $GITHUB_OUTPUT
             echo "urgency=" >> $GITHUB_OUTPUT
+          fi  
 
+          # do not send notification when mock testing
           if [ "${{ inputs.mock_mode }}" == "false" ]; then
             echo "link_names=true" >> $GITHUB_OUTPUT
           else
