@@ -69,21 +69,8 @@ jobs:
           description: |
             {panel:title=Pull Request Info}
             *Repository:* {{${{ env.REPO_NAME }}}}
-            *URL:* [#${{ github.event.issue.number }} - ${{ github.event.issue.title }}|${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}]  
-            *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]  
-            {panel}
-
-            {panel:title=['${{ env.REPO_NAME }}'${{ github.event.issue.number }}' - '${{ github.event.issue.title }}'|'${{ github.server_url }}'/'${{ github.repository }}'/pull/'${{ github.event.issue.number }}']}
-            *URL:* ['${{ env.REPO_NAME }}'${{ github.event.issue.number }}' - '${{ github.event.issue.title }}'|'${{ github.server_url }}'/'${{ github.repository }}'/pull/'${{ github.event.issue.number }}']  
-            *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]  
-            {panel}
-
-            {panel:title=[#123 - Bug fix|https://github.com/repo/pull/123]}
-            ...
-            {panel}
-
-            {panel:title=[${{ env.REPO_NAME }} PR#${{ github.event.issue.number }} - ${{ github.event.issue.title }}|${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}]}
-            *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]  
+            *URL:* ${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}
+            *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]
             {panel}
 
             ${{ needs.fetch-additional-info.outputs.additional_info }}
