@@ -1,0 +1,85 @@
+name: Get On-Call Engineer
+
+on:
+  workflow_call:
+    inputs:
+      mock_mode:
+        required: false
+        default: "true"
+        type: string
+    outputs:
+      oncall_email:
+        description: "Email of current on-call engineer"
+        value: ${{ jobs.get-oncall.outputs.oncall_email }}
+    secrets:
+      DD_API_KEY:
+        required: true
+      DD_APP_KEY:
+        required: true
+        
+jobs:
+  get-oncall:
+    runs-on: ubuntu-latest
+    env:
+      DD_API_KEY: ${{ secrets.DD_API_KEY }} 
+      DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
+    outputs:
+      oncall_email: ${{ steps.set-email.outputs.email }}
+
+    steps:
+      - name: Get on-call from Datadog
+        id: fetch
+        if: ${{ inputs.mock_mode == 'true' }}
+        run: |
+          RESPONSE=$(curl -s -H "DD-API-KEY: ${{ secrets.DD_API_KEY }}" \
+                          -H "DD-APPLICATION-KEY: ${{ secrets.DD_APP_KEY }}" \
+                          "https://api.datadoghq.com/api/unstable/on-call/schedules/1dc8c469-5768-4081-9e80-5559bda6f2f8/on-call")
+          echo "response=$RESPONSE" >> $GITHUB_OUTPUT
+
+      - name: Mock on-call response
+        id: fetch-mock
+        if: ${{ inputs.mock_mode == 'false' }}
+        run: |
+          RESPONSE='{
+            "data": {
+              "id": "uuid",
+              "type": "shifts",
+              "attributes": {
+                "end": "mock",
+                "start": "mock"
+              },
+              "relationships": {
+                "user": {
+                  "data": {
+                    "id": "uuid",
+                    "type": "users"
+                  }
+                }
+              }
+            },
+            "included": [
+              {
+                "id": "uuid",
+                "type": "users",
+                "attributes": {
+                  "email": "lgati@insider.com",
+                  "name": "mock name"
+                }
+              }
+            ]
+          }'
+          COMPACT=$(echo "$RESPONSE" | jq -c)
+          echo "response=$COMPACT" >> $GITHUB_OUTPUT
+
+      - name: Extract on-call email
+        id: set-email
+        run: |
+          RESPONSE='${{ steps.fetch.outputs.response || steps.fetch-mock.outputs.response }}'
+          EMAIL=$(echo "$RESPONSE" | jq -r '
+            . as $root |
+            $root.included[] 
+            | select(.id == $root.data.relationships.user.data.id and .type == "users") 
+            | .attributes.email
+          ')
+          echo "Extracted email: $EMAIL"
+          echo "email=$EMAIL" >> $GITHUB_OUTPUT

@@ -2,10 +2,7 @@ name: Notify TE on Slack
 
 on:
   workflow_call:
-    inputs:
-      assignee_email:
-        required: false
-        type: string   
+    inputs: 
       jira_ticket_url:
         required: true
         type: string
@@ -24,18 +21,7 @@ jobs:
   notify-slack:
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Extract assignee Slack handle
-        id: slack-handle
-        run: |
-          email="${{ inputs.assignee_email }}"
-          if [[ -n "$email" ]]; then
-            prefix="${email%%@*}"
-            echo "assignee_handle=$prefix" >> $GITHUB_OUTPUT
-          else
-            echo "assignee_handle=test-engineers" >> $GITHUB_OUTPUT
-          fi
-          
+    steps:          
       - name: Set Slack channel
         id: channel
         run: |
@@ -54,10 +40,12 @@ jobs:
           if [[ "${{ inputs.high_priority }}" == "true" ]]; then
             echo "color=#e01e5a" >> $GITHUB_OUTPUT
             echo "title=:red_circle: TE help needed *today*!!" >> $GITHUB_OUTPUT
+            echo "notifying_to=@te-goalie and @test-engineers" >> $GITHUB_OUTPUT
             echo "urgency=🔥 This request has been marked *high priority*." >> $GITHUB_OUTPUT
           else
             echo "color=#eed202" >> $GITHUB_OUTPUT
             echo "title=:large_yellow_circle: TE help was requested!" >> $GITHUB_OUTPUT
+            echo "notifying_to=@te-goalie" >> $GITHUB_OUTPUT
             echo "urgency=" >> $GITHUB_OUTPUT
           fi
 
@@ -72,7 +60,7 @@ jobs:
             *Code base*: `${{ steps.slack-meta.outputs.repo_name }}`
             *Pull Request*: <${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}|${{ github.event.issue.title || 'pr title' }} #${{ github.event.issue.number || 'XX' }}> 
 
-            *Notifying to*: @${{ steps.slack-handle.outputs.assignee_handle }}
+            *Notifying to*: ${{ steps.slack-meta.outputs.notifying_to }}
             *Jira ticket*: <${{ inputs.jira_ticket_url }}|${{ inputs.jira_ticket_id }}>
 
             ${{ steps.slack-meta.outputs.urgency }}

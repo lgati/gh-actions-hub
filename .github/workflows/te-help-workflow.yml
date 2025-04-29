@@ -30,21 +30,22 @@ jobs:
     uses: ./.github/workflows/update-comment-before.yml
     with:
       comment_id: ${{ inputs.comment_id }}
-
-  # get-oncall:
-  #   needs: update-comment-before
-  #   uses: ./.github/workflows/get-te-oncall.yml
-  #   with:
-  #     mock_mode: ${{ inputs.mock_mode }}
-  #   secrets:
-  #     DD_API_KEY: ${{ secrets.DD_API_KEY }} 
-  #     DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
   
   fetch-workflow-config:
+    needs: update-comment-before
     uses: ./.github/workflows/fetch-workflow-config.yml
 
-  create-jira-ticket:
+  get-oncall:
     needs: fetch-workflow-config
+    uses: ./.github/workflows/get-te-oncall.yml
+    with:
+      mock_mode: ${{ needs.fetch-workflow-config.outputs.mock_mode }}
+    secrets:
+      DD_API_KEY: ${{ secrets.DD_API_KEY }} 
+      DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
+  
+  create-jira-ticket:
+    needs: [fetch-workflow-config, get-oncall]
     uses: ./.github/workflows/create-te-jira.yml
     with:
       jira_base_url: ${{ inputs.jira_base_url }}
@@ -58,7 +59,6 @@ jobs:
     needs: [create-jira-ticket, fetch-workflow-config]
     uses: ./.github/workflows/notify-te-slack.yml
     with:
-      # assignee_email: ${{ needs.get-oncall.outputs.oncall_email }}
       jira_ticket_url: ${{ needs.create-jira-ticket.outputs.jira_ticket_url }}
       jira_ticket_id: ${{ needs.create-jira-ticket.outputs.jira_ticket_id }}
       high_priority: ${{ needs.fetch-workflow-config.outputs.high_priority }}
