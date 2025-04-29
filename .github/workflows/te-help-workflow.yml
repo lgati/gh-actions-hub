@@ -38,7 +38,8 @@ jobs:
         with:
           script: |
             const commentId = "${{ inputs.comment_id }}";
-            const message = `We're actively notifying **TE** and creating a JIRA ticket for your request and will update here once completed.`;
+            const message = `>[!WARNING]
+            >We're actively notifying **TE** and creating a JIRA ticket for your request and will update here once completed.`;
 
             await github.rest.reactions.createForIssueComment({
               owner: context.repo.owner,
@@ -90,7 +91,8 @@ jobs:
             const currentReactionType = "eyes"; 
             const newReactionType = "rocket"; // Add rocket reaction
 
-            const message = `Hey @${author}! TE help has been escalated! Follow up on ticket [![](https://img.shields.io/badge/${escapedJirId}-white?style=plastic&logo=jirasoftware&logoColor=%230052CC)](${jiraUrl})`;
+            const message = `>[!NOTE]
+            >Hey @${author}! TE help has been escalated! Follow up on ticket [![](https://img.shields.io/badge/${escapedJirId}-white?style=plastic&logo=jirasoftware&logoColor=%230052CC)](${jiraUrl})`;
 
             // Fetch all reactions for the comment
             const reactions = await github.rest.reactions.listForIssueComment({
