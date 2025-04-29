@@ -11,7 +11,7 @@ on:
         type: string
       high_priority:
         required: false
-        type: boolean
+        type: string
       additional_info:
         required: false
         type: string
