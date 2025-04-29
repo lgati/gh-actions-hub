@@ -65,14 +65,16 @@ jobs:
           REPO_NAME=$(echo '${{ github.repository }}' | cut -d'/' -f2 | tr 'a-z' 'A-Z')
           echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
 
-          # Set high priority fields if requested
+          # Build full fields JSON if high priority
           if [ "${{ inputs.high_priority }}" == "true" ]; then
-            echo "priority_name=High" >> $GITHUB_OUTPUT
-            echo "duedate=$(date +%F)" >> $GITHUB_OUTPUT
+            PRIORITY_JSON='"priority":{"name":"High"}'
+            DUEDATE_JSON=$(date +'"duedate":"%Y-%m-%d"')
+            FIELDS="{${PRIORITY_JSON},${DUEDATE_JSON}}"
           else
-            echo "priority_name=" >> $GITHUB_OUTPUT
-            echo "duedate=" >> $GITHUB_OUTPUT
+            FIELDS="{}"
           fi
+
+          echo "jira_fields=$FIELDS" >> $GITHUB_OUTPUT
 
       - name: Create Jira issue
         id: create
@@ -95,11 +97,7 @@ jobs:
             {panel:bgColor=#fefae6}
             Please review the failing checks and keep the ticket up-to-date with the progress status.
             {panel}
-          fields: >
-            {
-              ${{ steps.set_fields.outputs.priority_name != '' && format('"priority":{"name":"{0}"},', steps.set_fields.outputs.priority_name) || '' }}
-              ${{ steps.set_fields.outputs.duedate != '' && format('"duedate":"{0}"', steps.set_fields.outputs.duedate) || '' }}
-            }
+          fields: ${{ steps.set_fields.outputs.jira_fields }}
 
       - name: Assign Jira Ticket
         run: |
