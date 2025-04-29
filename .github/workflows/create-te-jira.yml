@@ -9,9 +9,6 @@ on:
       jira_user_email:
         required: true
         type: string
-      mock_mode:
-        required: false
-        type: string
       high_priority:
         required: false
         type: boolean
