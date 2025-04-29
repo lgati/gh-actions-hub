@@ -79,7 +79,7 @@ jobs:
           project: GH
           issuetype: Task
           summary: >
-            [${{ env.REPO_NAME }}] Issue detected on PR #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
+            [$REPO_NAME] Issue detected on PR #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
           description: |
             {panel}
             *Pull Request:* ${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}
