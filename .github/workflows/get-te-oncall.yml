@@ -29,7 +29,7 @@ jobs:
     steps:
       - name: Get on-call from Datadog
         id: fetch
-        if: ${{ inputs.mock_mode == 'true' }}
+        if: ${{ inputs.mock_mode == 'false' }}
         run: |
           RESPONSE=$(curl -s -H "DD-API-KEY: ${{ secrets.DD_API_KEY }}" \
                           -H "DD-APPLICATION-KEY: ${{ secrets.DD_APP_KEY }}" \
@@ -38,7 +38,7 @@ jobs:
 
       - name: Mock on-call response
         id: fetch-mock
-        if: ${{ inputs.mock_mode == 'false' }}
+        if: ${{ inputs.mock_mode == 'true' }}
         run: |
           RESPONSE='{
             "data": {
