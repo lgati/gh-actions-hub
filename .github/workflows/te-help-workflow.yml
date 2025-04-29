@@ -26,30 +26,10 @@ on:
 
 jobs:
   update-comment-before:
-    runs-on: ubuntu-latest
-    steps:      
-      - name: Update comment with feedback message and 👀 reaction 
-        if: github.event_name == 'issue_comment'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const commentId = "${{ inputs.comment_id }}";
-            const message = `>[!WARNING]
-            >We're actively notifying **TE** and creating a JIRA ticket for your request and will update here once completed.`;
-
-            await github.rest.reactions.createForIssueComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: commentId,
-              content: "eyes"
-            })
-
-            await github.rest.issues.updateComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: commentId,
-              body: message
-            });
+    if: github.event_name == 'issue_comment'
+    uses: ./.github/workflows/update-comment-before.yml
+    with:
+      comment_id: ${{ inputs.comment_id }}
 
   # get-oncall:
   #   needs: update-comment-before
@@ -62,7 +42,6 @@ jobs:
   
   fetch-workflow-config:
     uses: ./.github/workflows/fetch-workflow-config.yml
-    with: {}
 
   create-jira-ticket:
     needs: fetch-workflow-config
@@ -88,58 +67,13 @@ jobs:
 
   update-comment-after:
     needs: create-jira-ticket
-    runs-on: ubuntu-latest
-    steps:
-      - name: Update comment after jira is created with message and 🚀 reaction
-        if: github.event_name == 'issue_comment'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const commentId = "${{ inputs.comment_id }}";
-            const author = "${{ inputs.comment_author }}";
-            
-            const jirId = "${{ needs.create-jira-ticket.outputs.jira_ticket_id }}";
-            const escapedJirId = jirId.replace('-', '--');
-            const jiraUrl = "${{ needs.create-jira-ticket.outputs.jira_ticket_url }}";
-            
-            const currentReactionType = "eyes"; 
-            const newReactionType = "rocket"; // Add rocket reaction
-
-            const message = `>[!NOTE]
-            >Hey @${author}! TE help has been escalated! Follow up on ticket [![](https://img.shields.io/badge/${escapedJirId}-white?style=plastic&logo=jirasoftware&logoColor=%230052CC)](${jiraUrl})`;
-
-            // Fetch all reactions for the comment
-            const reactions = await github.rest.reactions.listForIssueComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: commentId
-            });
-
-            // Remove the "eyes" reaction (if it exists)
-            const reactionToRemove = reactions.data.find(reaction => reaction.content === currentReactionType);
-            if (reactionToRemove) {
-              await github.rest.reactions.deleteForIssueComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: commentId,
-                reaction_id: reactionToRemove.id
-              });
-            }
-
-            // Add the "rocket" reaction
-            await github.rest.reactions.createForIssueComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: commentId,
-              content: newReactionType
-            });
-
-            await github.rest.issues.updateComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: commentId,
-              body: message
-            });
+    if: github.event_name == 'issue_comment'
+    uses: ./.github/workflows/update-comment-after.yml
+    with:
+      comment_id: ${{ inputs.comment_id }}
+      comment_author: ${{ inputs.comment_author }}
+      jira_ticket_id: ${{ needs.create-jira-ticket.outputs.jira_ticket_id }}
+      jira_ticket_url: ${{ needs.create-jira-ticket.outputs.jira_ticket_url }}
 
   add-label-to-pr:
     needs: create-jira-ticket

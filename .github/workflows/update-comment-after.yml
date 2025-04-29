@@ -1,0 +1,64 @@
+name: Update Comment After
+
+on:
+  workflow_call:
+    inputs:
+      comment_id:
+        required: true
+        type: string
+      comment_author:
+        required: true
+        type: string
+      jira_ticket_id:
+        required: true
+        type: string
+      jira_ticket_url:
+        required: true
+        type: string
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Replace 👀 with 🚀 and post update
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commentId = "${{ inputs.comment_id }}";
+            const author = "${{ inputs.comment_author }}";
+            const jirId = "${{ inputs.jira_ticket_id }}";
+            const jiraUrl = "${{ inputs.jira_ticket_url }}";
+            const escapedJirId = jirId.replace('-', '--');
+
+            const message = `>[!NOTE]
+            >Hey @${author}! TE help has been escalated! Follow up on ticket [![](https://img.shields.io/badge/${escapedJirId}-white?style=plastic&logo=jirasoftware&logoColor=%230052CC)](${jiraUrl})`;
+
+            const reactions = await github.rest.reactions.listForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId
+            });
+
+            const reactionToRemove = reactions.data.find(r => r.content === "eyes");
+            if (reactionToRemove) {
+              await github.rest.reactions.deleteForIssueComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: commentId,
+                reaction_id: reactionToRemove.id
+              });
+            }
+
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId,
+              content: "rocket"
+            });
+
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId,
+              body: message
+            });
