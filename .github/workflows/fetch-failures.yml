@@ -82,7 +82,7 @@ jobs:
               for allowed_id in "${ALLOWED_CREATORS[@]}"; do
                 if [[ "$creator_id" == "$allowed_id" ]]; then
                   SAFE_CONTEXT=$(echo "$context" | sed 's/|//g')
-                  FAILURES_STATUSES+=$'- *['$SAFE_CONTEXT'|'${target_url:-"#"}']*: '"$description"$'\n'
+                  FAILURES_STATUSES+=$'- *['$SAFE_CONTEXT'|'${target_url:-"#"}']*: '{{"$description"}}$'\n'
                   break
                 fi
               done
