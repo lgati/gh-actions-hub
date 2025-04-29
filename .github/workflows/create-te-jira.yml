@@ -76,6 +76,9 @@ jobs:
 
             ${{ needs.fetch-failures.outputs.markdown_fragment }}
 
+            {status:colour=Green|title=failed|subtle=true}
+
+
             {panel:bgColor=#fefae6}
             Please review the failing checks and keep the ticket up-to-date with the progress status.
             {panel}
@@ -97,7 +100,7 @@ jobs:
             -H "Content-Type: application/json" \
             --data "$(jq -n --arg accountId "$accountId" '{accountId: $accountId}')" \
             "${{ inputs.jira_base_url }}/rest/api/3/issue/${{ steps.create.outputs.issue }}/assignee"
-
+            
       - name: Transition Jira Issue to "Open"
         run: |
           curl -X POST -u "${{ inputs.jira_user_email }}:$JIRA_API_TOKEN" \
