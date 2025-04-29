@@ -132,3 +132,4 @@ jobs:
               ]
             }
           CUSTOM_PAYLOAD: true
+          MSG_MINIMAL: true
