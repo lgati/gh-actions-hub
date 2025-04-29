@@ -18,10 +18,6 @@ on:
       jira_user_email:
         required: true
         type: string        
-      mock_mode:
-        required: false
-        default: "true"
-        type: string
     secrets:
       GH_TOKEN:
         required: true

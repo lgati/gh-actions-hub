@@ -15,6 +15,10 @@ on:
       additional_info:
         required: false
         type: string
+      mock_mode:
+        required: false
+        default: "true"
+        type: string
     outputs:
       repo_name:
         description: "Uppercase name of the repository"
