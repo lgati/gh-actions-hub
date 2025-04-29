@@ -53,13 +53,13 @@ jobs:
         run: |
           if [[ "${{ inputs.high_priority }}" == "true" ]]; then
             echo "color=#e01e5a" >> $GITHUB_OUTPUT
-            echo "emoji=:rotating_light:" >> $GITHUB_OUTPUT
-            echo "title=🚨 URGENT: TE help needed!" >> $GITHUB_OUTPUT
+            echo "emoji=::red_circle: :" >> $GITHUB_OUTPUT
+            echo "title=TE help needed TODAY!!" >> $GITHUB_OUTPUT
             echo "urgency=🔥 This request has been marked *high priority*." >> $GITHUB_OUTPUT
           else
             echo "color=#eed202" >> $GITHUB_OUTPUT
             echo "emoji=:robot_face:" >> $GITHUB_OUTPUT
-            echo "title=:yellow-alert: TE help was requested!" >> $GITHUB_OUTPUT
+            echo "title=::large_yellow_circle: -alert: TE help was requested!" >> $GITHUB_OUTPUT
             echo "urgency=" >> $GITHUB_OUTPUT
           fi
 
@@ -72,7 +72,7 @@ jobs:
           SLACK_TITLE: ${{ steps.slack-meta.outputs.title }}
           SLACK_MESSAGE: |  
             *Code base*: ${{ inputs.repo_name }}
-            *PR*: <${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}|#${{ github.event.issue.number || 'XX' }}> - ${{ github.event.issue.title || 'pr title' }}
+            *Pull Request*: <${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}|#${{ github.event.issue.number || 'XX' }}> - ${{ github.event.issue.title || 'pr title' }}
 
             *Notifying to*: @${{ steps.slack-handle.outputs.assignee_handle }}
             *Jira ticket*: <${{ inputs.jira_ticket_url }}|${{ inputs.jira_ticket_id }}>
