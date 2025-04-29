@@ -6,7 +6,7 @@ on:
       additional_info:
         description: "Additional text extracted from PR comment"
         value: ${{ jobs.extract.outputs.additional_info }}
-        
+
 jobs:
   extract:
     runs-on: ubuntu-latest
@@ -28,7 +28,7 @@ jobs:
             echo "Additional information detected:"
             echo "$ADDITIONAL_INFO"
 
-            FORMATTED_INFO="{panel:bgColor=#eae6ff|title=Additional information}"$'\n'"$ADDITIONAL_INFO"$'\n'"{panel}"
+            FORMATTED_INFO="{panel:bgColor=#eae6ff|title=User notes}"$'\n'"$ADDITIONAL_INFO"$'\n'"{panel}"
           else
             echo "No additional information provided."
             FORMATTED_INFO=""
