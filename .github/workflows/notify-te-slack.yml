@@ -1,0 +1,84 @@
+name: Notify TE on Slack
+
+on:
+  workflow_call:
+    inputs:
+      assignee_email:
+        required: false
+        type: string
+      repo_name:
+        required: false
+        type: string        
+      jira_ticket_url:
+        required: true
+        type: string
+      jira_ticket_id:
+        required: true
+        type: string
+      mock_mode:
+        required: false
+        default: "true"
+        type: string
+      high_priority:
+        required: false
+        type: string
+
+jobs:
+  notify-slack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Extract assignee Slack handle
+        id: slack-handle
+        run: |
+          email="${{ inputs.assignee_email }}"
+          if [[ -n "$email" ]]; then
+            prefix="${email%%@*}"
+            echo "assignee_handle=$prefix" >> $GITHUB_OUTPUT
+          else
+            echo "assignee_handle=test-engineers" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Set Slack channel
+        id: channel
+        run: |
+          if [[ "${{ inputs.mock_mode }}" == "true" ]]; then
+            echo "channel=slackbot-testing" >> $GITHUB_OUTPUT
+          else
+            echo "channel=te-alerts" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set Slack metadata
+        id: slack-meta
+        run: |
+          if [[ "${{ inputs.high_priority }}" == "true" ]]; then
+            echo "color=#e01e5a" >> $GITHUB_OUTPUT
+            echo "emoji=:rotating_light:" >> $GITHUB_OUTPUT
+            echo "title=🚨 URGENT: TE help needed!" >> $GITHUB_OUTPUT
+            echo "urgency=🔥 This request has been marked *high priority*." >> $GITHUB_OUTPUT
+          else
+            echo "color=#eed202" >> $GITHUB_OUTPUT
+            echo "emoji=:robot_face:" >> $GITHUB_OUTPUT
+            echo "title=:yellow-alert: TE help was requested!" >> $GITHUB_OUTPUT
+            echo "urgency=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_CHANNEL: ${{ steps.channel.outputs.channel }}
+          SLACK_COLOR: ${{ steps.slack-meta.outputs.color }}
+          SLACK_ICON_EMOJI: ${{ steps.slack-meta.outputs.emoji }}
+          SLACK_TITLE: ${{ steps.slack-meta.outputs.title }}
+          SLACK_MESSAGE: |  
+            *Code base*: ${{ inputs.repo_name }}
+            *PR*: <${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}|#${{ github.event.issue.number || 'XX' }}> - ${{ github.event.issue.title || 'pr title' }}
+
+            *Notifying to*: @${{ steps.slack-handle.outputs.assignee_handle }}
+            *Jira ticket*: <${{ inputs.jira_ticket_url }}|${{ inputs.jira_ticket_id }}>
+
+            ${{ steps.slack-meta.outputs.urgency }}
+          SLACK_USERNAME: TE Help Bot
+          SLACK_LINK_NAMES: true
+          SLACK_WEBHOOK: https://hooks.slack.com/services/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
+          MSG_MINIMAL: true
