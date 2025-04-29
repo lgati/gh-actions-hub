@@ -65,19 +65,19 @@ jobs:
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_CHANNEL: ${{ steps.channel.outputs.channel }}
-          SLACK_COLOR: ${{ steps.slack-meta.outputs.color }}
+          SLACK_USERNAME: TE Help Bot
           SLACK_ICON_EMOJI: ':robot_face:'
+          SLACK_COLOR: ${{ steps.slack-meta.outputs.color }}
           SLACK_TITLE: ${{ steps.slack-meta.outputs.title }}
           SLACK_MESSAGE: |  
             
-            *Code base*: ${{ inputs.repo_name }}
+            \n*Code base*: ${{ inputs.repo_name }}
             *Pull Request*: <${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}|#${{ github.event.issue.number || 'XX' }}> - ${{ github.event.issue.title || 'pr title' }}
 
             *Notifying to*: @${{ steps.slack-handle.outputs.assignee_handle }}
             *Jira ticket*: <${{ inputs.jira_ticket_url }}|${{ inputs.jira_ticket_id }}>
 
             ${{ steps.slack-meta.outputs.urgency }}
-          SLACK_USERNAME: TE Help Bot
           SLACK_LINK_NAMES: true
           SLACK_WEBHOOK: https://hooks.slack.com/services/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
           MSG_MINIMAL: true
