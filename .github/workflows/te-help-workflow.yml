@@ -60,8 +60,8 @@ jobs:
     needs: [create-jira-ticket, fetch-workflow-config]
     uses: ./.github/workflows/notify-te-slack.yml
     with:
-      jira_ticket_url: ${{ needs.create-jira-ticket.outputs.jira_ticket_url }}
-      jira_ticket_id: ${{ needs.create-jira-ticket.outputs.jira_ticket_id }}
+      jira_ticket_url: ${{ needs.create-jira-ticket.outputs.jira_ticket_url || 'mock' }}
+      jira_ticket_id: ${{ needs.create-jira-ticket.outputs.jira_ticket_id || 'mock'}}
       high_priority: ${{ needs.fetch-workflow-config.outputs.high_priority }}
       mock_mode: ${{ needs.fetch-workflow-config.outputs.mock_mode }}
 
@@ -72,8 +72,8 @@ jobs:
     with:
       comment_id: ${{ inputs.comment_id }}
       comment_author: ${{ inputs.comment_author }}
-      jira_ticket_id: ${{ needs.create-jira-ticket.outputs.jira_ticket_id }}
-      jira_ticket_url: ${{ needs.create-jira-ticket.outputs.jira_ticket_url }}
+      jira_ticket_url: ${{ needs.create-jira-ticket.outputs.jira_ticket_url || 'mock' }}
+      jira_ticket_id: ${{ needs.create-jira-ticket.outputs.jira_ticket_id || 'mock'}}
 
   add-label-to-pr:
     needs: create-jira-ticket

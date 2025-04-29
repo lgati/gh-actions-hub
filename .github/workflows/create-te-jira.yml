@@ -52,8 +52,8 @@ jobs:
       JIRA_USER_EMAIL: ${{ inputs.jira_user_email }}
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
     outputs:
-      jira_ticket_id: ${{ steps.create.outputs.issue || 'TE-1234'}}
-      jira_ticket_url: ${{ inputs.jira_base_url }}/browse/${{ steps.create.outputs.issue || 'TE-1234' }}
+      jira_ticket_id: ${{ steps.create.outputs.issue }}
+      jira_ticket_url: ${{ inputs.jira_base_url }}/browse/${{ steps.create.outputs.issue  }}
     steps:
       - name: Authenticate with Jira 
         uses: atlassian/gajira-login@v3
