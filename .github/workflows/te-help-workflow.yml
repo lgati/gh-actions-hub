@@ -62,6 +62,7 @@ jobs:
   
   fetch-workflow-config:
     uses: ./.github/workflows/fetch-workflow-config.yml
+    with: {}
 
   create-jira-ticket:
     needs: fetch-workflow-config
