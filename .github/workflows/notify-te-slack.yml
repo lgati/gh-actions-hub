@@ -47,6 +47,11 @@ jobs:
             echo "title=:large_yellow_circle: TE help was requested!" >> $GITHUB_OUTPUT
             echo "notifying_to=@te-goalie" >> $GITHUB_OUTPUT
             echo "urgency=" >> $GITHUB_OUTPUT
+
+          if [ "${{ inputs.mock_mode }}" == "false" ]; then
+            echo "link_names=true" >> $GITHUB_OUTPUT
+          else
+            echo "link_names=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Slack Notification
@@ -66,8 +71,6 @@ jobs:
             ${{ steps.slack-meta.outputs.urgency }}
           SLACK_USERNAME: TE Help Bot
           SLACK_ICON_EMOJI: ':robot_face:'
-          SLACK_LINK_NAMES: true
+          SLACK_LINK_NAMES: ${{ steps.slack-meta.outputs.link_names }}
           SLACK_WEBHOOK: https://hooks.slack.com/services/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
           MSG_MINIMAL: true
-
-          
