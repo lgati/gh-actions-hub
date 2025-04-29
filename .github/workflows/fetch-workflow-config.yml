@@ -44,7 +44,8 @@ jobs:
 
           # Remove known commands from the beginning of the comment
           CLEANED_COMMENT=$(echo "$COMMENT_BODY" | \
-            sed -E 's|^/te-help( mock| today)?[[:space:]]*||i')
+            sed -E 's|^/te-help( mock| today)?[[:space:]]*||I')
+
 
           # Format additional info (if anything left)
           if [ -n "$CLEANED_COMMENT" ]; then
