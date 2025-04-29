@@ -69,7 +69,7 @@ jobs:
           SLACK_ICON_EMOJI: ':robot_face:'
           SLACK_TITLE: ${{ steps.slack-meta.outputs.title }}
           SLACK_MESSAGE: |  
-            *Code base*: ${{ inputs.repo_name }}
+            \n*Code base*: ${{ inputs.repo_name }}
             *Pull Request*: <${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}|#${{ github.event.issue.number || 'XX' }}> - ${{ github.event.issue.title || 'pr title' }}
 
             *Notifying to*: @${{ steps.slack-handle.outputs.assignee_handle }}
