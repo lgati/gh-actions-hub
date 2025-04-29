@@ -29,33 +29,38 @@ jobs:
 
           COMMENT_BODY="${{ github.event.comment.body }}"
 
-          # Initialize config flags
+          # Initialize flags
           MOCK_MODE="false"
           HIGH_PRIORITY="false"
 
-          # Detect commands
-          if echo "$COMMENT_BODY" | grep -qE '^/te-help mock\b'; then
+          # Detect flags anywhere in the comment
+          if echo "$COMMENT_BODY" | grep -q -- '--mock'; then
             MOCK_MODE="true"
           fi
 
-          if echo "$COMMENT_BODY" | grep -qE '^/te-help today\b'; then
+          if echo "$COMMENT_BODY" | grep -q -- '--today'; then
             HIGH_PRIORITY="true"
           fi
 
-          # Remove known commands from the beginning of the comment safely
-          CLEANED_COMMENT=$(echo "$COMMENT_BODY" | awk '{sub(/^\/te-help( mock| today)?[[:space:]]*/,""); print}')
+          # Strip leading command and known flags
+          CLEANED_COMMENT=$(echo "$COMMENT_BODY" \
+            | sed -E 's#^/te-help[[:space:]]*##i' \
+            | sed -E 's#--mock##g' \
+            | sed -E 's#--today##g' \
+            | sed -E 's#[[:space:]]+$##' \
+            | sed -E 's#^[[:space:]]+##')
 
-          # Format additional info (if anything left)
+          # Format additional info (if any remains)
           if [ -n "$CLEANED_COMMENT" ]; then
             FORMATTED_INFO="{panel:bgColor=#eae6ff|title=User notes}"$'\n'"$CLEANED_COMMENT"$'\n'"{panel}"
           else
             FORMATTED_INFO=""
           fi
 
-          # Set outputs
+          # Output values
           echo "mock_mode=$MOCK_MODE" >> $GITHUB_OUTPUT
           echo "high_priority=$HIGH_PRIORITY" >> $GITHUB_OUTPUT
-
+          
           echo "additional_info<<EOF" >> $GITHUB_OUTPUT
           echo "$FORMATTED_INFO" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
