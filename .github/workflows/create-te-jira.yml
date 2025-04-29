@@ -19,9 +19,6 @@ on:
         required: false
         type: string
     outputs:
-      repo_name:
-        description: "Uppercase name of the repository"
-        value: ${{ jobs.create-jira-ticket.outputs.repo_name }}
       jira_ticket_id:
         description: "Jira ID of the created Jira ticket"
         value: ${{ jobs.create-jira-ticket.outputs.jira_ticket_id }}
@@ -51,7 +48,6 @@ jobs:
       JIRA_USER_EMAIL: ${{ inputs.jira_user_email }}
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
     outputs:
-      repo_name: ${{ steps.set_fields.outputs.repo_name }}
       jira_ticket_id: ${{ steps.create.outputs.issue }}
       jira_ticket_url: ${{ inputs.jira_base_url }}/browse/${{ steps.create.outputs.issue }}
     steps:
@@ -63,7 +59,7 @@ jobs:
         run: |
           # Set repository name
           REPO_NAME=$(echo '${{ github.repository }}' | cut -d'/' -f2 | tr 'a-z' 'A-Z')
-          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "repo_name=$REPO_NAME"  >> $GITHUB_ENV
 
           # Build full fields JSON if high priority
           if [ "${{ inputs.high_priority }}" == "true" ]; then
@@ -83,7 +79,7 @@ jobs:
           project: GH
           issuetype: Task
           summary: >
-            [${{ steps.set_fields.outputs.repo_name }}] Issue detected on PR #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
+            [${{ env.REPO_NAME }}] Issue detected on PR #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
           description: |
             {panel}
             *Pull Request:* ${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}

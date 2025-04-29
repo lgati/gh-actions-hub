@@ -5,10 +5,7 @@ on:
     inputs:
       assignee_email:
         required: false
-        type: string
-      repo_name:
-        required: false
-        type: string        
+        type: string   
       jira_ticket_url:
         required: true
         type: string
@@ -69,7 +66,7 @@ jobs:
           SLACK_TITLE: ${{ steps.slack-meta.outputs.title }}
           SLACK_MESSAGE: |  
             :empty:
-            *Code base*: `${{ inputs.repo_name }}`
+            *Code base*: `${{ github.repository }}`
             *Pull Request*: <${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}|${{ github.event.issue.title || 'pr title' }} #${{ github.event.issue.number || 'XX' }}> 
 
             *Notifying to*: @${{ steps.slack-handle.outputs.assignee_handle }}
