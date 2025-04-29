@@ -39,7 +39,7 @@ jobs:
     secrets: inherit
    
   create-jira-ticket:
-    needs: fetch-failures
+    needs: [fetch-failures, fetch-additional-info]
     runs-on: ubuntu-latest
     env:
       JIRA_BASE_URL: ${{ inputs.jira_base_url }}

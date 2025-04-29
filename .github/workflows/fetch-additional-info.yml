@@ -6,10 +6,7 @@ on:
       additional_info:
         description: "Additional text extracted from PR comment"
         value: ${{ jobs.extract.outputs.additional_info }}
-    secrets:
-      GH_TOKEN:
-        required: true
-
+        
 jobs:
   extract:
     runs-on: ubuntu-latest
