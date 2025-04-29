@@ -80,6 +80,4 @@ jobs:
             ${{ steps.slack-meta.outputs.urgency }}
           SLACK_LINK_NAMES: true
           SLACK_WEBHOOK: https://hooks.slack.com/services/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
-          MSG_MINIMAL: true
-          ENABLE_ESCAPES: true
-          SLACKIFY_MARKDOWN	: true
+          
