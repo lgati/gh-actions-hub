@@ -101,7 +101,7 @@ jobs:
             echo "Detected external failures:"
             echo "$FAILURES_STATUSES"
 
-            MARKDOWN="{panel:bgColor=#ffebe6|title=Failing checks}"$'\n'"$FAILURES_STATUSES"$'\n'"{panel}"
+            MARKDOWN="{panel:bgColor=#ffebe6|title=Failures}"$'\n'"$FAILURES_STATUSES"$'\n'"{panel}"
 
             echo "markdown_fragment<<EOF" >> $GITHUB_OUTPUT
             echo "$MARKDOWN" >> $GITHUB_OUTPUT

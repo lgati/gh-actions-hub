@@ -76,9 +76,6 @@ jobs:
 
             ${{ needs.fetch-failures.outputs.markdown_fragment }}
 
-            {status:colour=Green|title=failed|subtle=true}
-
-
             {panel:bgColor=#fefae6}
             Please review the failing checks and keep the ticket up-to-date with the progress status.
             {panel}
