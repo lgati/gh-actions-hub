@@ -67,13 +67,8 @@ jobs:
           summary: >
             [${{ env.REPO_NAME }}] Issue detected on PR #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
           description: |
-            {panel:title=${{ env.REPO_NAME }} PR #${{ github.event.issue.number }}}
-            *URL:* ${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}
-            *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]
             {panel}
-
-            {panel:bgColor=#d3d3d3}
-            *URL:* ${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}
+            *URL:* [${{ env.REPO_NAME }} PR #${{ github.event.issue.number }} - ${{ github.event.issue.title }}|${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}]
             *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]
             {panel}
 
