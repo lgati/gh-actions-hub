@@ -3,12 +3,6 @@ name: Create Jira Ticket
 on:
   workflow_call:
     inputs:
-      jira_base_url:
-        required: true
-        type: string
-      jira_user_email:
-        required: true
-        type: string
       mock_mode:
         required: false
         type: string
