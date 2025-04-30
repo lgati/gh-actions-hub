@@ -51,6 +51,20 @@ jobs:
       - name: Fetch Statuses (Currents and Argos)
         id: fetch-statuses
         run: |
+          FAILURES_STATUSES=""
+
+          if [[ "${{ inputs.mock_mode }}" == "true" ]]; then
+            echo "⚠️ MOCK_MODE enabled — injecting dummy failure output."
+
+            FAILURES_STATUSES+=$'- [argos:|https://argos-ci.com/mock]: 1 added, 1 failure — waiting for your decision'$'\n'
+            FAILURES_STATUSES+=$'- [Playwright E2E Tests - Currents|https://currents.dev/mock]: Tests: project: tests failed:1 passed:3 ignored:0'$'\n'
+
+            echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
+            echo "$FAILURES_STATUSES" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+            exit 0
+          fi
+
           echo "Fetching commit statuses for: ${{ github.repository }} commit: $pr_head_sha..."
 
           STATUS_URL="https://api.github.com/repos/${{ github.repository }}/commits/$pr_head_sha/statuses"
@@ -72,14 +86,7 @@ jobs:
             exit 1
           fi
 
-          FAILURES_STATUSES=""
-
           ALLOWED_CREATORS=("98385548" "62215774")
-
-          if [[ "${{ inputs.mock_mode }}" == "true" ]]; then
-            echo "⚠️ MOCK_MODE enabled — skipping creator ID filtering"
-            ALLOWED_CREATORS=()
-          fi
 
           while read -r row; do
             state=$(echo "$row" | jq -r '.state // empty')
