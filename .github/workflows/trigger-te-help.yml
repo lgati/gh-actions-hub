@@ -17,8 +17,9 @@ jobs:
       pr_number: ${{ github.event.issue.number || 0 }}
       comment_id: ${{ github.event.comment.id || '' }}
       comment_author: ${{ github.event.comment.user.login || '' }}
-      jira_base_url: https://lgatib.atlassian.net
-      jira_user_email: lucasgatti.b@gmail.com
     secrets:
       GH_TOKEN: ${{ secrets.GHA_PAT }}
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+      JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+      
