@@ -2,12 +2,17 @@ name: Fetch Failures
 
 on:
   workflow_call:
+    inputs:
+      mock_mode:
+        required: false
+        type: string
+        default: "false"
     outputs:
       markdown_fragment:
         description: "Markdown fragment listing external check failures"
         value: ${{ jobs.detect.outputs.markdown_fragment }}
     secrets:
-      GH_TOKEN:
+      GITHUBACTIONSTOKEN:
         required: true
 
 jobs:
@@ -22,9 +27,9 @@ jobs:
           echo "Fetching PR Head SHA from repo: ${{ github.repository }} and PR #${{ github.event.issue.number }}..."
 
           API_URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}"
-          
+
           HTTP_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
+            -H "Authorization: Bearer ${{ secrets.GITHUBACTIONSTOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$API_URL")
 
@@ -49,7 +54,7 @@ jobs:
           echo "Fetching commit statuses for: ${{ github.repository }} commit: $pr_head_sha..."
 
           STATUS_URL="https://api.github.com/repos/${{ github.repository }}/commits/$pr_head_sha/statuses"
-          STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
+          STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUBACTIONSTOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$STATUS_URL")
 
@@ -71,6 +76,11 @@ jobs:
 
           ALLOWED_CREATORS=("98385548" "62215774")
 
+          if [[ "${{ inputs.mock_mode }}" == "true" ]]; then
+            echo "⚠️ MOCK_MODE enabled — skipping creator ID filtering"
+            ALLOWED_CREATORS=()
+          fi
+
           while read -r row; do
             state=$(echo "$row" | jq -r '.state // empty')
             context=$(echo "$row" | jq -r '.context // empty')
@@ -79,16 +89,20 @@ jobs:
             creator_id=$(echo "$row" | jq -r '.creator.id // empty')
 
             if [[ "$state" == "failure" ]]; then
-              for allowed_id in "${ALLOWED_CREATORS[@]}"; do
-                if [[ "$creator_id" == "$allowed_id" ]]; then
-                  SAFE_CONTEXT=$(echo "$context" | sed 's/|//g')
-                  FAILURES_STATUSES+=$'- ['$SAFE_CONTEXT'|'${target_url:-"#"}']: '{{"$description"}}$'\n'
-                  break
-                fi
-              done
+              if [ ${#ALLOWED_CREATORS[@]} -eq 0 ]; then
+                SAFE_CONTEXT=$(echo "$context" | sed 's/|//g')
+                FAILURES_STATUSES+=$'- ['$SAFE_CONTEXT'|'${target_url:-"#"}']: '{{"$description"}}$'\n'
+              else
+                for allowed_id in "${ALLOWED_CREATORS[@]}"; do
+                  if [[ "$creator_id" == "$allowed_id" ]]; then
+                    SAFE_CONTEXT=$(echo "$context" | sed 's/|//g')
+                    FAILURES_STATUSES+=$'- ['$SAFE_CONTEXT'|'${target_url:-"#"}']: '{{"$description"}}$'\n'
+                    break
+                  fi
+                done
+              fi
             fi
           done < <(echo "$STATUS_RESPONSE" | jq -c '.[]')
-
 
           echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
           echo "$FAILURES_STATUSES" >> $GITHUB_ENV
