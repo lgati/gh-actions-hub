@@ -54,7 +54,7 @@ jobs:
           echo "Fetching commit statuses for: ${{ github.repository }} commit: $pr_head_sha..."
 
           STATUS_URL="https://api.github.com/repos/${{ github.repository }}/commits/$pr_head_sha/statuses"
-          STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUBACTIONSTOKEN }}" \
+          STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$STATUS_URL")
 
