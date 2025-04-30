@@ -34,6 +34,7 @@ jobs:
   fetch-workflow-config:
     needs: update-comment-before
     uses: ./.github/workflows/fetch-workflow-config.yml
+    secrets: inherit
 
   # get-oncall:
   #   needs: fetch-workflow-config
