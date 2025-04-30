@@ -106,7 +106,7 @@ jobs:
           echo "EOF" >> $GITHUB_ENV
 
 
-      - name: Build Markdown Output
+      - name: Mock failures
         if: ${{ inputs.mock_mode == 'true' }}
         id: mock-failures
         run: |

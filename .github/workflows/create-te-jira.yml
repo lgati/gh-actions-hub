@@ -41,6 +41,8 @@ permissions:
 jobs:
   fetch-failures:
     uses: ./.github/workflows/fetch-failures.yml
+    with:
+      mock_mode: ${{ inputs.mock_mode }}
     secrets: inherit
 
   create-jira-ticket:
