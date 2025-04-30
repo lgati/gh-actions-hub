@@ -12,12 +12,6 @@ on:
       comment_author:
         required: true
         type: string
-      jira_base_url:
-        required: true
-        type: string
-      jira_user_email:
-        required: true
-        type: string        
     secrets:
       GH_TOKEN:
         required: true
