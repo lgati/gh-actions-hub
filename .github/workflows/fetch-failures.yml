@@ -22,6 +22,7 @@ jobs:
       markdown_fragment: ${{ steps.build-markdown.outputs.markdown_fragment }}
     steps:
       - name: Fetch PR Head SHA
+        if: ${{ inputs.mock_mode == 'false' }}
         id: fetch-pr
         run: |
           echo "Fetching PR Head SHA from repo: ${{ github.repository }} and PR #${{ github.event.issue.number }}..."
@@ -49,21 +50,10 @@ jobs:
           echo "pr_head_sha=$PR_HEAD_SHA" >> $GITHUB_ENV
 
       - name: Fetch Statuses (Currents and Argos)
+        if: ${{ inputs.mock_mode == 'false' }}
         id: fetch-statuses
         run: |
           FAILURES_STATUSES=""
-
-          if [[ "${{ inputs.mock_mode }}" == "true" ]]; then
-            echo "⚠️ MOCK_MODE enabled — injecting dummy failure output."
-
-            FAILURES_STATUSES+=$'- [argos:|https://argos-ci.com/mock]: 1 added, 1 failure — waiting for your decision'$'\n'
-            FAILURES_STATUSES+=$'- [Playwright E2E Tests - Currents|https://currents.dev/mock]: Tests: project: tests failed:1 passed:3 ignored:0'$'\n'
-
-            echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
-            echo "$FAILURES_STATUSES" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-            exit 0
-          fi
 
           echo "Fetching commit statuses for: ${{ github.repository }} commit: $pr_head_sha..."
 
@@ -110,6 +100,28 @@ jobs:
               fi
             fi
           done < <(echo "$STATUS_RESPONSE" | jq -c '.[]')
+
+          echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
+          echo "$FAILURES_STATUSES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+
+      - name: Build Markdown Output
+        if: ${{ inputs.mock_mode == 'true' }}
+        id: mock-failures
+        run: |
+          FAILURES_STATUSES=""
+
+            echo "⚠️ MOCK_MODE enabled — injecting dummy failure output."
+
+            FAILURES_STATUSES+=$'- [argos:|https://argos-ci.com/mock]: 1 added, 1 failure — waiting for your decision'$'\n'
+            FAILURES_STATUSES+=$'- [Playwright E2E Tests - Currents|https://currents.dev/mock]: Tests: project: tests failed:1 passed:3 ignored:0'$'\n'
+
+            echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
+            echo "$FAILURES_STATUSES" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+            exit 0
+          fi
 
           echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
           echo "$FAILURES_STATUSES" >> $GITHUB_ENV
