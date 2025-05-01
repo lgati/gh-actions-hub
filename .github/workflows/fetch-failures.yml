@@ -144,15 +144,15 @@ jobs:
           echo "$CHECK_RUNS_RESPONSE" | jq -c '.check_runs[]' | while read -r run; do
             name=$(echo "$run" | jq -r '.name // empty')
             conclusion=$(echo "$run" | jq -r '.conclusion // empty')
-            html_url=$(echo "$run" | jq -r '.html_url // empty')
+            details_url=$(echo "$run" | jq -r '.details_url // empty')
 
             if [[ "$conclusion" == "failure" && "$name" == *"Node.js test"* ]]; then
               # Skip if URL already included
-              if echo "$FAILURES_STATUSES" | grep -qF "$html_url"; then
-                echo "🔁 Skipping duplicate check run: $html_url"
+              if echo "$FAILURES_STATUSES" | grep -qF "$details_url"; then
+                echo "🔁 Skipping duplicate check run: $details_url"
               else
-                echo "❌ Adding failed Node.js test: $html_url"
-                FAILURES_STATUSES+=$'- [Node.js tests|'"$html_url"$']\n'
+                echo "❌ Adding failed Node.js test: $details_url"
+                FAILURES_STATUSES+=$'- [Node.js tests|'"$details_url"$']\n'
               fi
             fi
           done
