@@ -72,7 +72,7 @@ jobs:
 
           # Format additional info (if any remains)
           if [ -n "$CLEANED_COMMENT" ]; then
-            FORMATTED_INFO="$CLEANED_COMMENT"
+          FORMATTED_INFO="----"$'\n'"{panel:title=User notes}"$'\n'"$CLEANED_COMMENT"$'\n'"{panel}"
           else
             FORMATTED_INFO=""
           fi
