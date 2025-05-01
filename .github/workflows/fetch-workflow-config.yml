@@ -48,7 +48,7 @@ jobs:
             MOCK_MODE="true"
           fi
 
-          if echo "$COMMENT_BODY" | grep -q -- '--today'; then
+          if echo "$COMMENT_BODY" | grep -q -- '--high'; then
             HIGH_PRIORITY="true"
           fi
 
@@ -64,7 +64,7 @@ jobs:
           CLEANED_COMMENT=$(echo "$COMMENT_BODY" \
             | sed -E 's#^/te-help[[:space:]]*##i' \
             | sed -E 's#--mock##g' \
-            | sed -E 's#--today##g' \
+            | sed -E 's#--high##g' \
             | sed -E 's#--force-jira##g' \
             | sed -E 's#--force-fetch-failures##g' \
             | sed -E 's#[[:space:]]+$##' \

@@ -32,18 +32,18 @@ jobs:
 #### ✅ 2. Comment Format
 
 ```
-/te-help [--mock] [--today] [--force-jira] [notes]
+/te-help [--mock] [--high] [--force-jira] [notes]
 ```
 
 **Available Flags:**
 - `--mock` → dry-run mode
-- `--today` → marks as high priority
+- `--high` → marks as high priority
 - `--force-jira` → triggers Jira even in mock mode
 
 **Examples:**
 - `/te-help Just adding notes to the ticket`
-- `/te-help --today This is urget`
-- `/te-help --today --mock Dry run but urgent`
+- `/te-help --high This is urget`
+- `/te-help --high --mock Dry run but urgent`
 
 #### ✅ 3. What It Does
 - Parses comment and extracts flags and notes
@@ -86,7 +86,7 @@ jobs:
    Adds 👀 reaction and a message saying the request is being processed
 
 2. **⚙️ fetch-workflow-config**  
-   Parses flags like `--mock`, `--today`, `--force-jira`
+   Parses flags like `--mock`, `--high`, `--force-jira`
 
 3. **👩‍💻 get-oncall**  
    Calls `get-te-oncall.yml` to fetch or mock current on-call TE engineer via Datadog API
@@ -133,7 +133,7 @@ jobs:
 **Purpose**:
 - Posts a message to Slack with repo, PR, and Jira info
 - Dynamically determines Slack handle from email
-- Adjusts styling and color based on `--today` flag
+- Adjusts styling and color based on `--high` flag
 
 ---
 
