@@ -3,6 +3,10 @@ name: Fetch Failures
 on:
   workflow_call:
     inputs:
+      force_fetch_failures:
+        required: false
+        type: string
+        default: "false"      
       mock_mode:
         required: false
         type: string
@@ -12,7 +16,7 @@ on:
         description: "Markdown fragment listing external check failures"
         value: ${{ jobs.detect.outputs.markdown_fragment }}
     secrets:
-      GH_TOKEN:
+      GITHUBACTIONSTOKEN:
         required: true
 
 jobs:
@@ -22,7 +26,7 @@ jobs:
       markdown_fragment: ${{ steps.build-markdown.outputs.markdown_fragment }}
     steps:
       - name: Fetch PR Head SHA
-        if: ${{ inputs.mock_mode == 'false' }}
+        if: ${{ inputs.mock_mode == 'false' || inputs.force_fetch_failures == 'true' }}
         id: fetch-pr
         run: |
           echo "Fetching PR Head SHA from repo: ${{ github.repository }} and PR #${{ github.event.issue.number }}..."
@@ -30,7 +34,7 @@ jobs:
           API_URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}"
 
           HTTP_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
+            -H "Authorization: Bearer ${{ secrets.GITHUBACTIONSTOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$API_URL")
 
@@ -50,15 +54,15 @@ jobs:
           echo "pr_head_sha=$PR_HEAD_SHA" >> $GITHUB_ENV
 
       - name: Fetch Statuses (Currents and Argos)
-        if: ${{ inputs.mock_mode == 'false' }}
+        if: ${{ inputs.mock_mode == 'false' || inputs.force_fetch_failures == 'true' }}
         id: fetch-statuses
         run: |
-          FAILURES_STATUSES=""
+          FAILURES_STATUSES="${FAILURES_STATUSES:-}"
 
           echo "Fetching commit statuses for: ${{ github.repository }} commit: $pr_head_sha..."
 
           STATUS_URL="https://api.github.com/repos/${{ github.repository }}/commits/$pr_head_sha/statuses"
-          STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
+          STATUS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUBACTIONSTOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$STATUS_URL")
 
@@ -86,13 +90,22 @@ jobs:
             creator_id=$(echo "$row" | jq -r '.creator.id // empty')
 
             if [[ "$state" == "failure" ]]; then
+              if [ -z "$target_url" ] || [ "$target_url" = "#" ]; then
+                continue
+              fi
+
+              if echo "$FAILURES_STATUSES" | grep -qF "$target_url"; then
+                echo "🔁 Skipping duplicate failure status: $target_url"
+                continue
+              fi
+
+              SAFE_CONTEXT=$(echo "$context" | sed 's/|//g')
+
               if [ ${#ALLOWED_CREATORS[@]} -eq 0 ]; then
-                SAFE_CONTEXT=$(echo "$context" | sed 's/|//g')
                 FAILURES_STATUSES+=$'- ['$SAFE_CONTEXT'|'${target_url:-"#"}']: '{{"$description"}}$'\n'
               else
                 for allowed_id in "${ALLOWED_CREATORS[@]}"; do
                   if [[ "$creator_id" == "$allowed_id" ]]; then
-                    SAFE_CONTEXT=$(echo "$context" | sed 's/|//g')
                     FAILURES_STATUSES+=$'- ['$SAFE_CONTEXT'|'${target_url:-"#"}']: '{{"$description"}}$'\n'
                     break
                   fi
@@ -105,23 +118,58 @@ jobs:
           echo "$FAILURES_STATUSES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
+      - name: Fetch check runs (Nodejs)
+        if: ${{ inputs.mock_mode == 'false' || inputs.force_fetch_failures == 'true' }}
+        id: fetch-check-runs
+        run: |
+          echo "Fetching check runs for commit: $pr_head_sha"
+
+          CHECK_RUNS_URL="https://api.github.com/repos/${{ github.repository }}/commits/$pr_head_sha/check-runs"
+          CHECK_RUNS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUBACTIONSTOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "$CHECK_RUNS_URL")
+
+          echo "==== RAW CHECK_RUNS_RESPONSE ===="
+          echo "$CHECK_RUNS_RESPONSE"
+          echo "================================="
+
+          if ! echo "$CHECK_RUNS_RESPONSE" | jq empty; then
+            echo "❌ ERROR: Invalid JSON from check-runs API."
+            exit 1
+          fi
+
+          # Ensure FAILURES_STATUSES is initialized
+          FAILURES_STATUSES="${FAILURES_STATUSES:-}"
+
+          echo "$CHECK_RUNS_RESPONSE" | jq -c '.check_runs[]' | while read -r run; do
+            name=$(echo "$run" | jq -r '.name // empty')
+            conclusion=$(echo "$run" | jq -r '.conclusion // empty')
+            html_url=$(echo "$run" | jq -r '.html_url // empty')
+
+            if [[ "$conclusion" == "failure" && "$name" == *"Node.js test"* ]]; then
+              # Skip if URL already included
+              if echo "$FAILURES_STATUSES" | grep -qF "$html_url"; then
+                echo "🔁 Skipping duplicate check run: $html_url"
+              else
+                echo "❌ Adding failed Node.js test: $html_url"
+                FAILURES_STATUSES+=$'- [Node.js tests|'"$html_url"$']\n'
+              fi
+            fi
+          done
+
+          # Export updated value to GITHUB_ENV
+          echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
+          echo "$FAILURES_STATUSES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Mock failures
-        if: ${{ inputs.mock_mode == 'true' }}
+        if: ${{ inputs.mock_mode == 'true' && inputs.force_fetch_failures == 'false' }}
         id: mock-failures
         run: |
-          FAILURES_STATUSES=""
+          echo "⚠️ MOCK_MODE enabled — injecting dummy failure output."
 
-            echo "⚠️ MOCK_MODE enabled — injecting dummy failure output."
-
-            FAILURES_STATUSES+=$'- [argos:|https://argos-ci.com/mock]: 1 added, 1 failure — waiting for your decision'$'\n'
-            FAILURES_STATUSES+=$'- [Playwright E2E Tests - Currents|https://currents.dev/mock]: Tests: project: tests failed:1 passed:3 ignored:0'$'\n'
-
-            echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
-            echo "$FAILURES_STATUSES" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-            exit 0
-          fi
+          FAILURES_STATUSES=$'- [argos:|https://argos-ci.com/mock]: 1 added, 1 failure — waiting for your decision\n'
+          FAILURES_STATUSES+=$'- [Playwright E2E Tests - Currents|https://currents.dev/mock]: Tests: project: tests failed:1 passed:3 ignored:0'
 
           echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
           echo "$FAILURES_STATUSES" >> $GITHUB_ENV
