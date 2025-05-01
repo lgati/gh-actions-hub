@@ -18,7 +18,7 @@ jobs:
       comment_id: ${{ github.event.comment.id || '' }}
       comment_author: ${{ github.event.comment.user.login || '' }}
     secrets:
-      GH_TOKEN: ${{ secrets.GHA_PAT }}
+      GITHUBACTIONSTOKEN: ${{ secrets.GITHUBACTIONSTOKEN }}
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
       JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
       JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}

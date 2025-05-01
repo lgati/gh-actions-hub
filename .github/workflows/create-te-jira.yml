@@ -23,7 +23,7 @@ on:
         description: "URL of the created Jira ticket"
         value: ${{ jobs.create-jira-ticket.outputs.jira_ticket_url }}
     secrets:
-      GH_TOKEN:
+      GITHUBACTIONSTOKEN:
         required: true
       JIRA_API_TOKEN:
         required: true
