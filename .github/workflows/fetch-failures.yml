@@ -123,30 +123,30 @@ jobs:
         id: fetch-check-runs
         run: |
           echo "Fetching check runs for commit: $pr_head_sha"
-
+      
           CHECK_RUNS_URL="https://api.github.com/repos/${{ github.repository }}/commits/$pr_head_sha/check-runs"
           CHECK_RUNS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUBACTIONSTOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "$CHECK_RUNS_URL")
-
+      
           echo "==== RAW CHECK_RUNS_RESPONSE ===="
           echo "$CHECK_RUNS_RESPONSE"
           echo "================================="
-
+      
           if ! echo "$CHECK_RUNS_RESPONSE" | jq empty; then
             echo "❌ ERROR: Invalid JSON from check-runs API."
             exit 1
           fi
-
+      
           # Ensure FAILURES_STATUSES is initialized
           FAILURES_STATUSES="${FAILURES_STATUSES:-}"
-
-          echo "$CHECK_RUNS_RESPONSE" | jq -c '.check_runs[]' | while read -r run; do
+      
+          while read -r run; do
             name=$(echo "$run" | jq -r '.name // empty')
             conclusion=$(echo "$run" | jq -r '.conclusion // empty')
             details_url=$(echo "$run" | jq -r '.details_url // empty')
-
-            if [[ "$conclusion" == "failure" && "$name" == *"Node.js test"* ]]; then
+      
+            if [[ "$conclusion" == "failure" && "$name" == *"Node.js"* ]]; then
               # Skip if URL already included
               if echo "$FAILURES_STATUSES" | grep -qF "$details_url"; then
                 echo "🔁 Skipping duplicate check run: $details_url"
@@ -155,13 +155,13 @@ jobs:
                 FAILURES_STATUSES+=$'- [Node.js tests|'"$details_url"$']\n'
               fi
             fi
-          done
-
+          done < <(echo "$CHECK_RUNS_RESPONSE" | jq -c '.check_runs[]')
+      
           # Export updated value to GITHUB_ENV
           echo "FAILURES_STATUSES<<EOF" >> $GITHUB_ENV
           echo "$FAILURES_STATUSES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
+      
       - name: Mock failures
         if: ${{ inputs.mock_mode == 'true' && inputs.force_fetch_failures == 'false' }}
         id: mock-failures
