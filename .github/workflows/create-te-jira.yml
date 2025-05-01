@@ -88,7 +88,7 @@ jobs:
           project: GH
           issuetype: Task
           summary: >
-            [${{ steps.set_fields.outputs.repo_name }}] Issue detected on PR #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
+            [${{ steps.set_fields.outputs.repo_name }}] Issue detected on PR #${{ github.event.issue.number }}
           description: |
             ----
 
