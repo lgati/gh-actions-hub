@@ -12,9 +12,9 @@ on:
         type: string
         default: "false"
     outputs:
-      markdown_fragment:
+      failures_output:
         description: "Markdown fragment listing external check failures"
-        value: ${{ jobs.detect.outputs.markdown_fragment }}
+        value: ${{ jobs.detect.outputs.failures_output }}
     secrets:
       GITHUBACTIONSTOKEN:
         required: true
@@ -23,7 +23,7 @@ jobs:
   detect:
     runs-on: ubuntu-latest
     outputs:
-      markdown_fragment: ${{ steps.build-markdown.outputs.markdown_fragment }}
+      failures_output: ${{ steps.build-markdown.outputs.failures_output }}
     steps:
       - name: Fetch PR Head SHA
         if: ${{ inputs.mock_mode == 'false' || inputs.force_fetch_failures == 'true' }}
@@ -184,10 +184,10 @@ jobs:
 
             MARKDOWN="{panel:bgColor=#ffebe6|title=Failures}"$'\n'"$FAILURES_STATUSES"$'\n'"{panel}"
 
-            echo "markdown_fragment<<EOF" >> $GITHUB_OUTPUT
+            echo "failures_output<<EOF" >> $GITHUB_OUTPUT
             echo "$MARKDOWN" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           else
             echo "✅ No failing statuses detected."
-            echo "markdown_fragment=" >> $GITHUB_OUTPUT
+            echo "failures_output=" >> $GITHUB_OUTPUT
           fi

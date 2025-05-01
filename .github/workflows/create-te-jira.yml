@@ -90,18 +90,14 @@ jobs:
           summary: >
             [${{ steps.set_fields.outputs.repo_name }}] Issue detected on PR #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
           description: |
-            {panel}
+            ---
             *Pull Request:* ${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.issue.number }}
             *Requested by:* [@${{ github.event.comment.user.login }}|https://github.com/${{ github.event.comment.user.login }}]
-            {panel}
-
+            ---            
+            ${{ needs.fetch-failures.outputs.failures_output }}
+            ---
             ${{ inputs.additional_info }}
 
-            ${{ needs.fetch-failures.outputs.markdown_fragment }}
-
-            {panel:bgColor=#fefae6}
-            Please review the failing checks and keep the ticket up-to-date with the progress status.
-            {panel}
           fields: ${{ steps.set_fields.outputs.jira_fields }}
 
       - name: Assign Jira Ticket
