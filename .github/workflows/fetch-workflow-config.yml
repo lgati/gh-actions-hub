@@ -12,6 +12,9 @@ on:
       force_jira:
         description: "Whether force Jira creation is requested even if mock mode is true"
         value: ${{ jobs.extract.outputs.force_jira }}
+      force_fetch_failures:
+        description: "Whether to force fetching PR check failures even in mock mode"
+        value: ${{ jobs.extract.outputs.force_fetch_failures }}
       additional_info:
         description: "Cleaned comment content, formatted for Jira"
         value: ${{ jobs.extract.outputs.additional_info }}
@@ -23,6 +26,7 @@ jobs:
       mock_mode: ${{ steps.extract.outputs.mock_mode }}
       high_priority: ${{ steps.extract.outputs.high_priority }}
       force_jira: ${{ steps.extract.outputs.force_jira }}
+      force_fetch_failures: ${{ steps.extract.outputs.force_fetch_failures }}
       additional_info: ${{ steps.extract.outputs.additional_info }}
 
     steps:
@@ -37,6 +41,7 @@ jobs:
           MOCK_MODE="false"
           HIGH_PRIORITY="false"
           FORCE_JIRA="false"
+          FORCE_FETCH_FAILURES="false"
 
           # Detect flags anywhere in the comment
           if echo "$COMMENT_BODY" | grep -q -- '--mock'; then
@@ -51,12 +56,17 @@ jobs:
             FORCE_JIRA="true"
           fi
 
+          if echo "$COMMENT_BODY" | grep -q -- '--force-fetch-failures'; then
+            FORCE_FETCH_FAILURES="true"
+          fi
+
           # Strip leading command and known flags
           CLEANED_COMMENT=$(echo "$COMMENT_BODY" \
             | sed -E 's#^/te-help[[:space:]]*##i' \
             | sed -E 's#--mock##g' \
             | sed -E 's#--today##g' \
             | sed -E 's#--force-jira##g' \
+            | sed -E 's#--force-fetch-failures##g' \
             | sed -E 's#[[:space:]]+$##' \
             | sed -E 's#^[[:space:]]+##')
 
@@ -71,6 +81,7 @@ jobs:
           echo "mock_mode=$MOCK_MODE" >> $GITHUB_OUTPUT
           echo "high_priority=$HIGH_PRIORITY" >> $GITHUB_OUTPUT
           echo "force_jira=$FORCE_JIRA" >> $GITHUB_OUTPUT
+          echo "force_fetch_failures=$FORCE_FETCH_FAILURES" >> $GITHUB_OUTPUT
 
           echo "additional_info<<EOF" >> $GITHUB_OUTPUT
           echo "$FORMATTED_INFO" >> $GITHUB_OUTPUT

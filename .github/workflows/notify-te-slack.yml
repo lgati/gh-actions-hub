@@ -16,7 +16,9 @@ on:
       high_priority:
         required: false
         type: string
-
+    # secrets:
+    #   SLACK_TOKEN:
+    #     required: true
 jobs:
   notify-slack:
     runs-on: ubuntu-latest
@@ -28,7 +30,7 @@ jobs:
           if [[ "${{ inputs.mock_mode }}" == "true" ]]; then
             echo "channel=slackbot-testing" >> $GITHUB_OUTPUT
           else
-            echo "channel=te-alerts" >> $GITHUB_OUTPUT
+            echo "channel=the-testing-room" >> $GITHUB_OUTPUT
           fi
 
       - name: Set Slack metadata
@@ -40,12 +42,12 @@ jobs:
           # set slack data based on priority
           if [[ "${{ inputs.high_priority }}" == "true" ]]; then
             echo "color=#e01e5a" >> $GITHUB_OUTPUT
-            echo "title=:red_circle: TE help needed *today*!!" >> $GITHUB_OUTPUT
+            echo "title=:alert: TE help needed *today*!!" >> $GITHUB_OUTPUT
             echo "notifying_to=@te-goalie and @test-engineers" >> $GITHUB_OUTPUT
             echo "urgency=🔥 This request has been marked *high priority*." >> $GITHUB_OUTPUT
           else
             echo "color=#eed202" >> $GITHUB_OUTPUT
-            echo "title=:large_yellow_circle: TE help was requested!" >> $GITHUB_OUTPUT
+            echo "title=:yellow-alert: TE help was requested!" >> $GITHUB_OUTPUT
             echo "notifying_to=@te-goalie" >> $GITHUB_OUTPUT
             echo "urgency=" >> $GITHUB_OUTPUT
           fi  
@@ -54,6 +56,8 @@ jobs:
           if [ "${{ inputs.mock_mode }}" == "false" ]; then
             echo "link_names=true" >> $GITHUB_OUTPUT
           else
+            echo "color=#3cb371" >> $GITHUB_OUTPUT
+            echo "title=:green-alert: This is a mock request!" >> $GITHUB_OUTPUT
             echo "link_names=false" >> $GITHUB_OUTPUT
           fi
 

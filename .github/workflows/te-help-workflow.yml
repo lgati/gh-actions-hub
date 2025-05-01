@@ -12,16 +12,24 @@ on:
       comment_author:
         required: true
         type: string
+      jira_base_url:
+        required: true
+        type: string
+      jira_user_email:
+        required: true
+        type: string        
     secrets:
       GITHUBACTIONSTOKEN:
         required: true
+      # DD_API_KEY:
+      #   required: true
+      # DD_APP_KEY:
+      #   required: true
       JIRA_API_TOKEN:
         required: true
-      JIRA_BASE_URL:
-        required: true
-      JIRA_USER_EMAIL:
-        required: true
-
+      # SLACK_TOKEN:
+      #   required: true
+        
 jobs:
   update-comment-before:
     if: github.event_name == 'issue_comment'
@@ -32,24 +40,26 @@ jobs:
   fetch-workflow-config:
     needs: update-comment-before
     uses: ./.github/workflows/fetch-workflow-config.yml
-    secrets: inherit
 
-  # get-oncall:
-  #   needs: fetch-workflow-config
-  #   uses: ./.github/workflows/get-te-oncall.yml
-  #   with:
-  #     mock_mode: ${{ needs.fetch-workflow-config.outputs.mock_mode }}
-  #   secrets:
-  #     DD_API_KEY: ${{ secrets.DD_API_KEY }} 
-  #     DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
+  get-oncall:
+    needs: fetch-workflow-config
+    uses: ./.github/workflows/get-te-oncall.yml
+    with:
+      mock_mode: ${{ needs.fetch-workflow-config.outputs.mock_mode }}
+    secrets:
+      DD_API_KEY: ${{ secrets.DD_API_KEY }} 
+      DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
   
   create-jira-ticket:
-    needs: [fetch-workflow-config]
+    needs: [fetch-workflow-config, get-oncall]
     uses: ./.github/workflows/create-te-jira.yml
     with:
+      jira_base_url: ${{ inputs.jira_base_url }}
+      jira_user_email: ${{ inputs.jira_user_email }}
       high_priority: ${{ needs.fetch-workflow-config.outputs.high_priority }}
       additional_info: ${{ needs.fetch-workflow-config.outputs.additional_info }}
       force_jira: ${{ needs.fetch-workflow-config.outputs.force_jira }}
+      force_fetch_failures: ${{ needs.fetch-workflow-config.outputs.force_fetch_failures }}
       mock_mode: ${{ needs.fetch-workflow-config.outputs.mock_mode }}
     secrets: inherit
 
@@ -61,6 +71,8 @@ jobs:
       jira_ticket_id: ${{ needs.create-jira-ticket.outputs.jira_ticket_id || 'mock'}}
       high_priority: ${{ needs.fetch-workflow-config.outputs.high_priority }}
       mock_mode: ${{ needs.fetch-workflow-config.outputs.mock_mode }}
+    # secrets:
+    #   SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }} 
 
   update-comment-after:
     needs: create-jira-ticket
